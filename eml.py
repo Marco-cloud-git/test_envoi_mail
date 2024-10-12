@@ -74,6 +74,76 @@ class Eml:
             return [TextEncoding.decode_header(addr) for addr in addresses.split(',')]
         return []
 
+    
+
+class EmlModifier:
+    def __init__(self, eml_object):
+        """
+        Initialise l'objet avec un email Eml existant.
+        """
+        self.eml = eml_object
+
+    def set_sender(self, new_sender):
+        """
+        Modifie l'expéditeur de l'email.
+        :param new_sender: Nouvelle adresse email de l'expéditeur (string).
+        """
+        self.eml.message.replace_header('From', new_sender)
+
+    def add_recipient(self, recipient, field_name='To'):
+        """
+        Ajoute un destinataire à un champ spécifique (To, Cc, ou Bcc).
+        :param recipient: Adresse email du destinataire (string).
+        :param field_name: Champ de destinataire (par défaut 'To').
+        """
+        if field_name not in ['To', 'Cc', 'Bcc']:
+            raise ValueError("Le champ de destinataire doit être 'To', 'Cc', ou 'Bcc'")
+        
+        # Récupérer l'adresse existante et ajouter le destinataire si nécessaire
+        current_recipients = self.eml.message[field_name]
+        if current_recipients:
+            new_recipients = f"{current_recipients}, {recipient}"
+        else:
+            new_recipients = recipient
+
+        self.eml.message.replace_header(field_name, new_recipients)
+
+    def set_recipients(self, recipients, field_name='To'):
+        """
+        Remplace les destinataires d'un champ spécifique (To, Cc, ou Bcc).
+        :param recipients: Liste d'adresses email (list de strings).
+        :param field_name: Champ de destinataire à modifier (par défaut 'To').
+        """
+        if field_name not in ['To', 'Cc', 'Bcc']:
+            raise ValueError("Le champ de destinataire doit être 'To', 'Cc', ou 'Bcc'")
+        
+        # Joindre les nouvelles adresses email
+        new_recipients = ', '.join(recipients)
+        self.eml.message.replace_header(field_name, new_recipients)
+
+    def remove_recipient(self, recipient, field_name='To'):
+        """
+        Supprime un destinataire spécifique d'un champ (To, Cc, ou Bcc).
+        :param recipient: Adresse email du destinataire à supprimer (string).
+        :param field_name: Champ de destinataire où chercher l'adresse (par défaut 'To').
+        """
+        if field_name not in ['To', 'Cc', 'Bcc']:
+            raise ValueError("Le champ de destinataire doit être 'To', 'Cc', ou 'Bcc'")
+        
+        current_recipients = self.eml.message[field_name]
+        if current_recipients:
+            # Retirer le destinataire et réenregistrer les adresses
+            updated_recipients = ', '.join(
+                addr.strip() for addr in current_recipients.split(',') if addr.strip() != recipient
+            )
+            self.eml.message.replace_header(field_name, updated_recipients)
+
+    def get_email_message(self):
+        """
+        Retourne l'objet email avec les modifications appliquées.
+        """
+        return self.eml.message
+
     def save(self, new_file_path=None):
         if new_file_path is None:
             new_file_path = self.file_path
