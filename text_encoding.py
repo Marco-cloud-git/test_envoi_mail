@@ -1,82 +1,27 @@
-from quopri import decodestring
-from base64 import b64decode
-
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+from email.header import decode_header
 
 class TextEncoding:
-    """
-        Class to perform character encoding - BASE64 and QUOTED-PRINTABLE on MIME part content. It uses the 'quopri' and 'base64' modules in the Standard Python library to decode the encoded strings.
-    """
     @staticmethod
-    def decode_quoted_printable_string(encoded_string: str, string_charset: str, is_header: bool) -> str:
-        """
-            [FOR INTERNAL USE ONLY]
-            A static function to convert Quoted-Printable encoded string to human-readable string.
-            :param encoded_string: The string to be decoded.
-            :param string_charset: Character set of the human-readable string.
-            :param is_header: A boolean value to indicate if the encoded string is an email header.
-            :returns:  the decoded string.
-        """
-        if string_charset == str():
-            string_charset = "utf-8"
-        decoded_value = decodestring(encoded_string, header=is_header)
-        decoded_string = decoded_value.decode(string_charset)
-        return decoded_string
-
-    @staticmethod
-    def decode_base64_string(encoded_string: str, string_charset: str = "utf-8") -> str:
-        """
-            [FOR INTERNAL USE ONLY]
-            A static function to convert BASE64 encoded string to human-readable string.
-            :param encoded_string: The string to be decoded.
-            :param string_charset: Character set of the human-readable string.
-            :returns: the decoded string.
-        """
-        decoded_bytes = b64decode(encoded_string)
-        decoded_string = decoded_bytes.decode(string_charset)
-        return decoded_string
-
-    @staticmethod
-    def decode_base64_file(file_contents: str) -> bytes:
-        """
-            A static function to convert BASE64 encoded file back to normal binary file.
-            :param file_contents: Base64 encoded string representing the binary file contents.
-            :returns: the decoded binary file contents as 'bytes'.
-        """
-        decoded_file_contents = b64decode(file_contents)
-        return decoded_file_contents
-
-    @staticmethod
-    def decode_header(encoded_string: str) -> str:
-        """
-            A static function to decode an encoded header in a MIME part.
-            :param encoded_string: The string to be decoded.
-            :returns: the decoded string.
-        """
-        if encoded_string is not None:
-            encoded_string = encoded_string.strip()
-        if encoded_string is not None and encoded_string.startswith("=?"):
-            encoded_string = encoded_string[2:]
-            encoded_string = encoded_string[0: len(encoded_string) - 2]
-            string_parts = encoded_string.split("?")
-            if (string_parts[1]).strip().upper() == "Q":
-                decoded_string = TextEncoding.decode_quoted_printable_string(string_parts[2], string_parts[0], True)
-            elif (string_parts[1]).strip().upper() == "B":
-                decoded_string = TextEncoding.decode_base64_string(string_parts[2], string_parts[0])
+    def decode_header(encoded_string):
+         # Vérifier si la chaîne est None avant le décodage
+        if encoded_string is None:
+            return ""  # Retourne une chaîne vide si l'en-tête n'existe pas
+        decoded_fragments = []
+        for part, encoding in decode_header(encoded_string):
+            if isinstance(part, bytes):
+                decoded_fragments.append(part.decode(encoding or 'utf-8'))
             else:
-                raise InvalidEncodingError(encoded_string)
-        else:
-            decoded_string = encoded_string
+                decoded_fragments.append(part)
+        return ''.join(decoded_fragments)
 
-        return decoded_string
-    
 class InvalidEncodingError(Exception):
     """A custom exception class to report Invalid Encoding errors."""
-    def __init__(self, EncodedValue: str = str()):
-        self.EncodedValue = EncodedValue
-        self.Message = "Invalid encoding used"
+    def __init__(self, encoded_value: str = ''):
+        self.encoded_value = encoded_value
+        self.message = "Invalid encoding used"
+        super().__init__(self.message)
 
     def __str__(self):
-        if self.EncodedValue == str():
-            return f"Error occurred on line {self.__traceback__.tb_lineno}:> {self.Message}."
-        else:
-            return f"Error occurred on line {self.__traceback__.tb_lineno}:> {self.Message}.\nEncoded string causing the error: {self.EncodedValue}."
+        return f"{self.message}. Encoded string causing the error: {self.encoded_value}"

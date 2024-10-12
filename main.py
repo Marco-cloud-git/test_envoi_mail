@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
 from eml import Eml
 
 
@@ -18,7 +17,8 @@ def main(file_path):
     print("Date:", eml.date)
     print("Message-ID:", eml.message_id)
     print("Subject:", eml.subject)
-    # print("Body:", eml.body)
+    # print("Body:", eml.get_body())
 
 if __name__ == "__main__":
+    file_path = "depot_eml/test YAHOO PJ nom avec caractères spéciaux.eml"
     main(file_path)
