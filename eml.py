@@ -9,7 +9,14 @@ from text_encoding import TextEncoding
 class Eml:
     def __init__(self, file_path):
         self.file_path = file_path
-        self.message = self._load_eml(file_path)
+        self._loaded_eml = self._load_eml(file_path)
+        self.get_metadata()
+
+    def _load_eml(self, file_path):
+        with open(file_path, 'rb') as f:
+            return BytesParser(policy=policy.default).parse(f)
+
+    def get_metadata(self):
         self.name = self.get_name()
         self.sender = self.get_sender()
         self.to = self.get_to()
@@ -20,16 +27,25 @@ class Eml:
         self.date = self.get_date()
         self.message_id = self.get_message_id()
         self.subject = self.get_subject()
+        # self.body = self.get_body()
 
-    def _load_eml(self, file_path):
-        with open(file_path, 'rb') as f:
-            return BytesParser(policy=policy.default).parse(f)
+    def print_eml(self):
+        print("Name:", self.name)
+        print("Sender:", self.sender)
+        print("To:", self.to)
+        print("Cc:", self.cc)
+        print("Bcc:", self.bcc)
+        print("Reply-To:", self.reply_to)
+        print("Return-Path:", self.return_path)
+        print("Date:", self.date)
+        print("Message-ID:", self.message_id)
+        print("Subject:", self.subject)
 
     def get_name(self):
         return os.path.basename(self.file_path)
 
     def get_sender(self):
-        return TextEncoding.decode_header(self.message['From'])
+        return TextEncoding.decode_header(self._loaded_eml['From'])
 
     def get_to(self):
         return self._get_addresses('To')
@@ -41,26 +57,26 @@ class Eml:
         return self._get_addresses('Bcc')
 
     def get_reply_to(self):
-        return TextEncoding.decode_header(self.message['Reply-To'])
+        return TextEncoding.decode_header(self._loaded_eml['Reply-To'])
 
     def get_return_path(self):
-        return TextEncoding.decode_header(self.message['Return-Path'])
+        return TextEncoding.decode_header(self._loaded_eml['Return-Path'])
 
     def get_date(self):
-        return self.message['Date']
+        return self._loaded_eml['Date']
 
     def get_message_id(self):
-        return self.message['Message-ID']
+        return self._loaded_eml['Message-ID']
 
     def get_subject(self):
-        return self.message['Subject']
+        return self._loaded_eml['Subject']
 
     def get_body(self):
         try:
-            if self.message.is_multipart():
-                return ''.join(part.get_content() for part in self.message.iter_parts() if part.get_content_type() == 'text/plain')
+            if self._loaded_eml.is_multipart():
+                return ''.join(part.get_content() for part in self._loaded_eml.iter_parts() if part.get_content_type() == 'text/plain')
             else:
-                return self.message.get_body(preferencelist=('plain')).get_content()
+                return self._loaded_eml.get_body(preferencelist=('plain')).get_content()
         except Exception as e:
             print("Error retrieving body:", e)
             return None
@@ -69,7 +85,7 @@ class Eml:
         """
         Helper method to parse multiple email addresses in the To, Cc, and Bcc fields.
         """
-        addresses = self.message[field_name]
+        addresses = self._loaded_eml[field_name]
         if addresses:
             return [TextEncoding.decode_header(addr) for addr in addresses.split(',')]
         return []
