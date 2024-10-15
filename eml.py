@@ -7,6 +7,7 @@ import os
 from text_encoding import TextEncoding
 from datetime import datetime
 import pytz
+from functools import wraps
 
 
 class Eml:
@@ -111,14 +112,37 @@ class ModifyEml:
         else:
             self.eml_object = eml_object  # Composition : `ModifyEml` contient `Eml`
 
-    def modify(self, sender=None, return_path=None, reply_to=None):
+    # decorateur pour modifier les adresses mails de destination à partir d'une liste.
+    def with_recipient_list(func):
+        @wraps(func)
+        def wrapper(self, recipient, *args, **kwargs):
+            # Si email est une liste, on appelle func pour chaque adresse
+            if isinstance(recipient, list) or isinstance(recipient, tuple):
+                print("putain")
+                for address in recipient:
+                    func(self, address, *args, **kwargs)
+            else:
+                print("dtc")
+                # Si email n'est pas une liste, on l'appelle une seule fois
+                func(self, recipient, *args, **kwargs)
+
+        return wrapper
+
+    def modify(
+        self, sender=None, return_path=None, reply_to=None, to=None, cc=None, bcc=None
+    ):
         """
-        Modifie les adresses de l'expediteur, du reply-to, du return_path de l'email, du destinataire principale, du destinataire secondaire, de la date et du message_id.
+        Modifie les adresses de l'expediteur, du reply-to, du return_path de l'email, du destinataire principale, du destinataire secondaire, du destinataire caché, de la date et du message_id.
         :param sender: Nouvelle adresse email de l'expéditeur (string).
+        :param return_path: Nouvelle adresse email de réponse en cas d'erreur (string).
+        :param reply_to: Nouvelle adresse email pour la réponse (string).
+        :param to: Nouveau destinataire principale (string).
+        :param cc: Nouveau destinataire secondaire  (string).
+        :param bcc: Nouveau destinataire caché  (string).
         """
         self.set_date(timezone_str="Europe/Paris")
         self.set_message_id()
-        self.modify_sender(sender, return_path, reply_to)
+        self.modify_sender(sender=sender, return_path=return_path, reply_to=reply_to)
 
     def modify_sender(self, sender=None, return_path=None, reply_to=None):
         """
@@ -162,23 +186,34 @@ class ModifyEml:
         if self.eml_object.reply_to is not None and self.eml_object.reply_to != "":
             self.eml_object.eml_data.replace_header("Reply-To", reply_to)
 
-    # def add_recipient(self, recipient, field_name='To'):
-    #     """
-    #     Ajoute un destinataire à un champ spécifique (To, Cc, ou Bcc).
-    #     :param recipient: Adresse email du destinataire (string).
-    #     :param field_name: Champ de destinataire (par défaut 'To').
-    #     """
-    #     if field_name not in ['To', 'Cc', 'Bcc']:
-    #         raise ValueError("Le champ de destinataire doit être 'To', 'Cc', ou 'Bcc'")
+    @with_recipient_list
+    def add_recipient(self, recipient, field_name="To"):
+        """
+        Ajoute un destinataire à un champ spécifique (To, Cc, ou Bcc).
+        :param recipient: Adresse email du destinataire (string).
+        :param field_name: Champ de destinataire (par défaut 'To').
+        """
+        if field_name not in ["To", "Cc", "Bcc"]:
+            raise ValueError("Le champ de destinataire doit être 'To', 'Cc', ou 'Bcc'")
 
-    #     # Récupérer l'adresse existante et ajouter le destinataire si nécessaire
-    #     current_recipients = self.eml.eml_object[field_name]
-    #     if current_recipients:
-    #         new_recipients = f"{current_recipients}, {recipient}"
-    #     else:
-    #         new_recipients = recipient
+        if self.eml_object.eml_data[field_name] is not None and recipient is not None:
+            # Récupérer l'adresse existante et ajouter le destinataire si nécessaire
+            current_recipients = self.eml_object.eml_data[field_name]
+            if current_recipients:
+                new_recipients = f"{current_recipients}, {recipient}"
+            else:
+                new_recipients = recipient
 
-    #     self.eml.eml_object.replace_header(field_name, new_recipients)
+            self.eml_object.eml_data.replace_header(field_name, new_recipients)
+
+    def list_adresse_from_string(adress):
+        """
+        Permet de découper la chaine de caractère contenant les adresses mails.
+        Retourne une liste d'adresses.
+        :param recipient: une ou plusieurs adresses mails
+        """
+        list_adress = list(map(str.strip, adress.split(",")))
+        return list_adress
 
     # def set_recipients(self, recipients, field_name='To'):
     #     """
