@@ -12,7 +12,9 @@ eml_file_path = os.path.join(config.entry_folder_path, eml_name)
 new_sender = "new_sender@test.fr"
 new_reply_to = None         #"new_reply_to@test.fr"
 new_return_path = "new_return_path@test.fr"
-
+new_to = "my_to@test.fr", "2x_to@test.fr"
+new_cc =  "my_cc@test.fr"          #None       #"my_cc@test.fr"
+new_bcc = None
 
 def main(eml_file_pat):
     # Vérifier que le répertoire de sortie existe
@@ -33,10 +35,14 @@ def main(eml_file_pat):
     # Créer un modificateur pour l'objet Eml
     eml_modifier = ModifyEml(eml)
     # Modifier la date, l'expéditeur, Return_Path et Reply_To
+    # eml_modifier.modify(
+    #     sender=new_sender, reply_to=new_reply_to, return_path=new_return_path, to=to, cc=cc, bcc=bcc
+    # )
     eml_modifier.modify(
-        sender=new_sender, reply_to=new_reply_to, return_path=new_return_path
+        sender=new_sender, reply_to=new_reply_to, return_path=new_return_path, cc=new_cc, bcc=new_bcc
     )
-
+    eml_modifier.add_recipient(recipient=new_to, field_name="To")
+    eml_modifier.add_recipient(recipient=new_cc, field_name="Cc")
     # Sauvegarder l'email modifié
     eml_modifier.save(destination_file_path)
 
