@@ -2,8 +2,11 @@
 # -*- coding: utf-8 -*-
 from email import policy
 from email.parser import BytesParser
+from email.utils import format_datetime, make_msgid
 import os
 from text_encoding import TextEncoding
+from datetime import datetime
+import pytz
 
 
 class Eml:
@@ -106,14 +109,26 @@ class ModifyEml:
         if eml_object is None:
             raise ValueError("L'objet EML fourni est None.")
         else:
-            self._object = eml_object  # Composition : `ModifyEml` contient `Eml`
+            self.eml_object = eml_object  # Composition : `ModifyEml` contient `Eml`
 
-    def set_sender(self, sender, return_path=None, reply_to=None):
+    def modify(self, sender=None, return_path=None, reply_to=None):
         """
-        Modifie les adresses de l'expediteur, du reply-to et du return_path de l'email.
+        Modifie les adresses de l'expediteur, du reply-to, du return_path de l'email, du destinataire principale, du destinataire secondaire, de la date et du message_id.
         :param sender: Nouvelle adresse email de l'expéditeur (string).
         """
-        self.set_mail_sender(sender)
+        self.set_date(timezone_str="Europe/Paris")
+        self.set_message_id()
+        self.modify_sender(sender, return_path, reply_to)
+
+    def modify_sender(self, sender=None, return_path=None, reply_to=None):
+        """
+        Modifie les adresses de l'expediteur, du reply-to et du du return_path de l'email.
+        :param sender: Nouvelle adresse email de l'expéditeur (string).
+        :param return_path: Nouvelle adresse email de réponse en cas d'erreur (string).
+        :param reply_to: Nouvelle adresse email pour la réponse (string).
+        """
+        if return_path is not None:
+            self.set_mail_sender(sender)
         if return_path is not None:
             self.set_return_path(return_path)
         if reply_to is not None:
@@ -124,7 +139,7 @@ class ModifyEml:
         Modifie l'expéditeur de l'email.
         :param mail_sender: Nouvelle adresse email de l'expéditeur (string).
         """
-        self._object.eml_data.replace_header("From", mail_sender)
+        self.eml_object.eml_data.replace_header("From", mail_sender)
 
     def set_return_path(self, return_path):
         """
@@ -132,8 +147,11 @@ class ModifyEml:
         :param new_reply_to: Nouvelle adresse email de réponse du mail (string).
         :param new_return_path: Nouvelle adresse email de retour du mail en cas d'erreur (string).
         """
-        if self._object.return_path is not None and self._object.return_path != "":
-            self._object.eml_data.replace_header("Return-Path", return_path)
+        if (
+            self.eml_object.return_path is not None
+            and self.eml_object.return_path != ""
+        ):
+            self.eml_object.eml_data.replace_header("Return-Path", return_path)
 
     def set_reply_to(self, reply_to):
         """
@@ -141,8 +159,8 @@ class ModifyEml:
         :param new_reply_to: Nouvelle adresse email de réponse du mail (string).
         :param new_return_path: Nouvelle adresse email de retour du mail en cas d'erreur (string).
         """
-        if self._object.reply_to is not None and self._object.reply_to != "":
-            self._object.eml_data.replace_header("Reply-To", reply_to)
+        if self.eml_object.reply_to is not None and self.eml_object.reply_to != "":
+            self.eml_object.eml_data.replace_header("Reply-To", reply_to)
 
     # def add_recipient(self, recipient, field_name='To'):
     #     """
@@ -203,8 +221,48 @@ class ModifyEml:
     #     """
     #     return self.eml.eml_object
 
-    def save(self, new_file_path):  # =None):
-        if not hasattr(self._object, "as_bytes"):
+    # Convertir la date actuelle du mail en timezone-aware
+    # def convert_date_to_timezone(date_str, timezone_str):
+    #     # Exemple : date_str = 'Tue, 15 Mar 2023 10:00:00'
+    #     date_format = "%a, %d %b %Y %X"
+    #     naive_date = datetime.strptime(date_str, date_format)
+
+    #     # Rendre la date "timezone-aware"
+    #     local_tz = pytz.timezone(timezone_str)
+    #     aware_date = local_tz.localize(naive_date)
+
+    # return aware_date
+
+    # Obtenir la date en suivant le fuseau horaire et le changement d'heure
+    def get_date(self, timezone_str="Europe/Paris"):
+        local_tz = pytz.timezone(timezone_str)
+        datetime_now = datetime.now(local_tz)
+
+        # Formater la date selon le format RFC 2822 pour l’en-tête email
+        return format_datetime(datetime_now)
+
+    # Changer la date en suivant le fuseau horaire et le changement d'heure
+    def set_date(self, timezone_str="Europe/Paris"):
+        new_date = self.get_date(timezone_str)
+        print(f"new_date : {new_date}")
+        # Mettre à jour l'en-tête "Date"
+        self.eml_object.eml_data.replace_header("Date", new_date)
+
+    def set_message_id(self):
+        """
+        Générer un nouvel identifiant unique.
+        Modifie le champ 'Message-ID' de l'email.
+        :param new_message_id: Nouveau Message-ID pour l'email (string).
+        """
+
+        # Générer un Message-ID unique
+        new_message_id = make_msgid()
+
+        # Remplacer le Message-ID de l'email
+        self.eml_object.eml_data.replace_header("Message-ID", new_message_id)
+
+    def save(self, new_file_path):
+        if not hasattr(self.eml_object, "as_bytes"):
             raise AttributeError("L'objet EML ne possède pas de méthode 'as_bytes'.")
         with open(new_file_path, "wb") as f:
-            f.write(self._object.as_bytes())
+            f.write(self.eml_object.as_bytes())

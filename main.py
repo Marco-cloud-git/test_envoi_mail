@@ -26,18 +26,16 @@ def main(eml_file_pat):
     eml = Eml(eml_file_pat)
     Eml.print_eml(eml)
     name = eml.get_name()
-
-    # Créer un modificateur pour l'objet Eml
-    eml_modifier = ModifyEml(eml)
-
-    # Modifier l'expéditeur, Return_Path et Reply_To
-    eml_modifier.set_sender(
-        sender=new_sender, reply_to=new_reply_to, return_path=new_return_path
-    )
-
     # Construire le chemin de destination et sauvegarder
     destination_file_path = os.path.join(config.destination_folder_path, name)
     print(f"Destination : {destination_file_path}")
+
+    # Créer un modificateur pour l'objet Eml
+    eml_modifier = ModifyEml(eml)
+    # Modifier la date, l'expéditeur, Return_Path et Reply_To
+    eml_modifier.modify(
+        sender=new_sender, reply_to=new_reply_to, return_path=new_return_path
+    )
 
     # Sauvegarder l'email modifié
     eml_modifier.save(destination_file_path)
