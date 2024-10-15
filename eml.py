@@ -118,11 +118,9 @@ class ModifyEml:
         def wrapper(self, recipient, *args, **kwargs):
             # Si email est une liste, on appelle func pour chaque adresse
             if isinstance(recipient, list) or isinstance(recipient, tuple):
-                print("putain")
                 for address in recipient:
                     func(self, address, *args, **kwargs)
             else:
-                print("dtc")
                 # Si email n'est pas une liste, on l'appelle une seule fois
                 func(self, recipient, *args, **kwargs)
 
