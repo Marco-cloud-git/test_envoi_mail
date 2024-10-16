@@ -1,11 +1,12 @@
 Date: Thu, 11 Feb 2021 15:31:39 +0000 (UTC)
 From: Jean delaged <jeandelaged@yahoo.com>
 To: 
-	"gestionsinistre.recn.o365@pprodmaif.fr" <gestionsinistre.recn.o365@pprodmaif.fr>
+	"adresse_principale@test" <adresse_principale@test>
+Cc: "adresse_secondaire@test" <adresse_secondaire@test>
 Message-ID: <378490645.617881.1613057499289@mail.yahoo.com>
 Subject: =?UTF-8?Q?test_YAHOO_PJ_nom_avec_caract=C3=A8res_sp=C3=A9ciaux?=
-Reply-To: reply_to@test.fr
-Return-Path: return_path@test.fr
+Reply-To: toto@test.fr
+Return-Path: toto@test.fr
 MIME-Version: 1.0
 Content-Type: multipart/mixed; 
 	boundary="----=_Part_617880_947492036.1613057499289"
