@@ -283,17 +283,6 @@ class ModifyEml:
             new_recipients = ",".join(list_new_recipients)
             return self._set_item_object(value=new_recipients, field=convert_field)
 
-        # self.set_item(field_name, new_recipients)
-        # current_recipients = self.eml_object[field_name]
-        # if current_recipients:
-        #     # Retirer le destinataire et réenregistrer les adresses
-        #     updated_recipients = ", ".join(
-        #         addr.strip()
-        #         for addr in current_recipients.split(",")
-        #         if addr.strip() != recipient
-        #     )
-        #     self.eml.eml_object.replace_header(field_name, updated_recipients)
-
     def set_recipient(
         self,
         recipient,
