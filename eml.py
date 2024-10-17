@@ -119,7 +119,7 @@ class ModifyEml:
         contient file_path : chemin vers l'eml,
         eml_data : texte de l'eml,
         name : nom de l'eml
-        et des paramétress extraits du header :  sender,  to, cc, bcc, reply_to, return_path, date, message_id, subject
+        et des paramètress extraits du header :  sender,  to, cc, bcc, reply_to, return_path, date, message_id, subject
         """
         if eml_object is None:
             raise ValueError("L'objet EML fourni est None.")
@@ -194,7 +194,7 @@ class ModifyEml:
     def _already_exist(value, list_adresses):
         """
         Test si la valeur n'existe pas dans une liste.
-        list est converti en liste si c'est une chaine de caractère.
+        list_adresses est converti en liste si c'est une chaine de caractère.
         Retourne un booléen.
         :param value: valeur à tester (string ou liste).
         :param list_adresses: liste d'adresses à comparer.
@@ -214,23 +214,11 @@ class ModifyEml:
         Modifie la valeur d'une balise dans le header de l'email.
         La valeur doit exister dans l'instance et la nouvelle valeur ne doit pas etre nulle.
         :param field: nom du champs à modifier (string).
-        :param value: nouvelle valeur de la balise.
         """
         item = ModifyEml._convert_field_name(field)
         _bool, value = self._value_exist(item)
         if _bool is True and value is not None:
             self.eml_object.eml_data.replace_header(field, value)
-
-    def _set_item(self, value, field):
-        """
-        Modifie la valeur d'un paramétre dans l'instance.
-        La valeur doit exister dans l'instance et la nouvelle valeur ne doit pas etre nulle.
-        :param field: nom du champs à modifier (string).
-        :param value: nouvelle valeur de la balise (string).
-        """
-        _bool, _ = self._value_exist(field)
-        if _bool is True and value is not None:
-            setattr(self.eml_object, field, value)
 
     def parse_email_list(adress):
         """
@@ -240,36 +228,8 @@ class ModifyEml:
         """
         return list(map(str.strip, adress.split(",")))
 
-    def set_subject(self, subject):
-        """
-        Modifie dans l'instance le sujet de l'email.
-        :param subject: Nouveau sujet de l'email.
-        """
-        self._set_item(value=subject, field="subject")
-
-    def set_sender(self, sender):
-        """
-        Modifie dans l'instance l'expéditeur de l'email.
-        :param sender: Nouvelle adresse email de l'expéditeur (string).
-        """
-        self._set_item(value=sender, field="sender")
-
-    def set_return_path(self, return_path):
-        """
-        Modifie dans l'instance les adresses de retour de l'email.
-        :param return_path: Nouvelle adresse email de retour du mail en cas d'erreur (string).
-        """
-        self._set_item(value=return_path, field="return_path")
-
-    def set_reply_to(self, reply_to):
-        """
-        Modifie dans l'instance les adresses de retour de l'email.
-        :param reply_to: Nouvelle adresse email de réponse du mail (string).
-        """
-        self._set_item(value=reply_to, field="reply_to")
-
     @with_recipient_list
-    def add_recipient(self, recipient, field_name):
+    def _add_recipient(self, recipient, field_name):
         """
         Ajoute un destinataire à un champ spécifique (To, Cc, ou Bcc).
         L'ajout ne se fait que si la valeur n'existe pas déjà.
@@ -292,15 +252,36 @@ class ModifyEml:
                 new_recipients = recipient
             self._set_item(value=new_recipients, field=convert_field)
 
-    def remove_recipient(self, recipient, field_name):
+    def add_to(self, recipient):
+        """
+        Ajoute un destinataire au champ To.
+        L'ajout ne se fait que si la valeur n'existe pas déjà.
+        :param recipient: Adresse email du destinataire (string).
+        """
+        self._add_recipient(recipient=recipient, field_name="To")
+
+    def add_cc(self, recipient):
+        """
+        Ajoute un destinataire au champ Cc.
+        L'ajout ne se fait que si la valeur n'existe pas déjà.
+        :param recipient: Adresse email du destinataire (string).
+        """
+        self._add_recipient(recipient=recipient, field_name="Cc")
+
+    def add_bcc(self, recipient):
+        """
+        Ajoute un destinataire au champ Bcc.
+        L'ajout ne se fait que si la valeur n'existe pas déjà.
+        :param recipient: Adresse email du destinataire (string).
+        """
+        self._add_recipient(recipient=recipient, field_name="Bcc")
+
+    def _remove_recipient(self, recipient, field_name):
         """
         Supprime un destinataire spécifique d'un champ (To, Cc, ou Bcc).
         :param recipient: Adresse email du destinataire à supprimer (string).
         :param field_name: Champ de destinataire où chercher l'adresse.
         """
-        if not field_name in ["To", "Cc", "Bcc"]:
-            msg = f'field_name : {field_name} doit être : "To", "Cc", "Bcc".'
-            raise ValueError(msg)
         convert_field = ModifyEml._convert_field_name(field_name)
         _bool, value = self._value_exist(convert_field)
         if _bool is True and value is not None:
@@ -313,11 +294,39 @@ class ModifyEml:
             new_recipients = ", ".join(list_new_recipients)
             return self._set_item(value=new_recipients, field=convert_field)
 
-    def set_recipient(
-        self,
-        recipient,
-        field_name,
-    ):
+    def remove_to(self, recipient):
+        """
+        Supprime un destinataire spécifique d'un champ To.
+        :param recipient: Adresse email du destinataire à supprimer (string).
+        """
+        self._remove_recipient(recipient, field_name="To")
+
+    def remove_cc(self, recipient):
+        """
+        Supprime un destinataire spécifique d'un champ Cc.
+        :param recipient: Adresse email du destinataire à supprimer (string).
+        """
+        self._remove_recipient(recipient, field_name="Cc")
+
+    def remove_bcc(self, recipient):
+        """
+        Supprime un destinataire spécifique d'un champ Bcc.
+        :param recipient: Adresse email du destinataire à supprimer (string).
+        """
+        self._remove_recipient(recipient, field_name="Bcc")
+
+    def _set_item(self, value, field):
+        """
+        Modifie la valeur d'un paramétre dans l'instance.
+        La valeur doit exister dans l'instance et la nouvelle valeur ne doit pas etre nulle.
+        :param field: nom du champs à modifier (string).
+        :param value: nouvelle valeur de la balise (string).
+        """
+        _bool, _ = self._value_exist(field)
+        if _bool is True and value is not None:
+            setattr(self.eml_object, field, value)
+
+    def _set_recipient(self, recipient, field_name):
         """
         Remplace les destinataires d'un champ spécifique (To, Cc, ou Bcc).
         :param recipient: adresses email (string).
@@ -325,6 +334,55 @@ class ModifyEml:
         """
         convert_field = ModifyEml._convert_field_name(field_name)
         self._set_item(value=recipient, field=convert_field)
+
+    def set_subject(self, subject):
+        """
+        Modifie dans l'instance le sujet de l'email.
+        :param subject: Nouveau sujet de l'email.
+        """
+        self._set_item(value=subject, field="subject")
+
+    def set_from(self, sender):
+        """
+        Modifie dans l'instance l'expéditeur de l'email.
+        :param sender: Nouvelle adresse email de l'expéditeur (string).
+        """
+        self._set_item(value=sender, field="sender")
+
+    def set_return_path(self, return_path):
+        """
+        Modifie dans l'instance les adresses de retour de l'email.
+        :param return_path: Nouvelle adresse email de retour du mail en cas d'erreur (string).
+        """
+        self._set_item(value=return_path, field="return_path")
+
+    def set_reply_to(self, reply_to):
+        """
+        Modifie dans l'instance les adresses de retour de l'email.
+        :param reply_to: Nouvelle adresse email de réponse du mail (string).
+        """
+        self._set_item(value=reply_to, field="reply_to")
+
+    def set_to(self, recipient):
+        """
+        Remplace les destinataires du champ To.
+        :param recipient: adresses email (string).
+        """
+        self._set_recipient(recipient, field_name="To")
+
+    def set_cc(self, recipient):
+        """
+        Remplace les destinataires du champ Cc.
+        :param recipient: adresses email (string).
+        """
+        self._set_recipient(recipient, field_name="Cc")
+
+    def set_bcc(self, recipient):
+        """
+        Remplace les destinataires du champ Bcc.
+        :param recipient: adresses email (string).
+        """
+        self._set_recipient(recipient, field_name="Bcc")
 
     # Changer la date en suivant le fuseau horaire et le changement d'heure
     def set_date(self, timezone_str="Europe/Paris"):
@@ -342,7 +400,6 @@ class ModifyEml:
         """
         Génére un nouvel identifiant unique.
         Modifie le champ 'Message-ID' de l'instance.
-        :param new_message_id: Nouveau Message-ID pour l'email (string).
         """
         # Générer un Message-ID unique
         new_message_id = make_msgid()
