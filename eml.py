@@ -123,9 +123,6 @@ class ModifyEml:
     def with_recipient_list(func):
         @wraps(func)
         def wrapper(self, recipient, *args, **kwargs):
-            # # Récupérer recipient à partir des kwargs
-            # recipient = kwargs.get("recipient")
-            # print("recipient : ", recipient)
             # Si email est une liste, on appelle func pour chaque adresse
             if isinstance(recipient, list) or isinstance(recipient, tuple):
                 for address in recipient:
@@ -133,29 +130,8 @@ class ModifyEml:
             else:
                 # Si email n'est pas une liste, on l'appelle une seule fois
                 func(self, recipient, *args, **kwargs)
-            return wrapper
 
-    # def with_recipient_list(func):
-    #     @wraps(func)
-    #     def wrapper(self, *args, **kwargs):
-    #         # Vérifier que le bon nombre d'arguments est fourni
-    #         # if len(args) < 2:
-    #         #     raise ValueError("Il faut spécifier field_name et recipient.")
-
-    #         # Récupérer field_name et recipient
-    #         recipient = kwargs.get("recipient")
-    #         field_name = kwargs.get("field_name")
-    #         # field_name = args[0]
-    #         # recipient = args[1]
-
-    #         # Gérer les cas où recipient est une liste ou non
-    #         if isinstance(recipient, list) or isinstance(recipient, tuple):
-    #             for address in recipient:
-    #                 func(self, field_name, address, *args[2:], **kwargs)
-    #         else:
-    #             func(self, field_name, recipient, *args[2:], **kwargs)
-
-    #     return wrapper
+        return wrapper
 
     def _convert_field_name(field):
         """
@@ -200,7 +176,7 @@ class ModifyEml:
         if field is not None:
             value = getattr(self.eml_object, field, None)
             if isinstance(value, list) or isinstance(value, tuple):
-                value = value = ",".join(value)
+                value = ",".join(value)
             if value is not None and len(value) > 0:
                 _bool = True
         return _bool, value
@@ -274,14 +250,11 @@ class ModifyEml:
         :param recipient: Adresse email du destinataire (string).
         :param field_name: Champ de destinataire.
         """
-        print("recipient : ", recipient)
-        print("field_name : ", field_name)
         if not field_name in ["To", "Cc", "Bcc"]:
             msg = f'field_name : {field_name} doit être : "To","Cc","Bcc".'
             raise ValueError(msg)
         convert_field = ModifyEml._convert_field_name(field_name)
         _bool, list_current_recipients = self._value_exist(convert_field)
-        print("convert_field : ", convert_field)
         if _bool is True:
             if recipient is not None:
                 new_recipients = f"{list_current_recipients}, {recipient}"
@@ -289,29 +262,26 @@ class ModifyEml:
                 new_recipients = recipient
             return self._set_item_object(value=new_recipients, field=convert_field)
 
-    def remove_recipient(self, field_name, recipient):
+    def remove_recipient(self, recipient, field_name):
         """
         Supprime un destinataire spécifique d'un champ (To, Cc, ou Bcc).
         :param recipient: Adresse email du destinataire à supprimer (string).
         :param field_name: Champ de destinataire où chercher l'adresse.
         """
-        field = ModifyEml._convert_field_name(field_name)
-        _bool = self._value_exist(field)
-
-        if _bool is True:
-            list_current_recipients = getattr(self.eml_object, field, None)
-            if (
-                list_current_recipients is not None
-                and recipient in list_current_recipients
-            ):
-                _list = list_current_recipients.remove(recipient)
-                new_recipients = ",".join(_list)
-            else:
-                new_recipients = None
-            self._set_item_object(value=new_recipients, field=field_name)
-        else:
-            msg = f"Le champs {field} n'existe pas dans l'objet : {self.eml_object}."
-            raise msg
+        if not field_name in ["To", "Cc", "Bcc", "Return-Path", "Reply-To"]:
+            msg = f'field_name : {field_name} doit être : "To", "Cc", "Bcc", "Return-Path", "Reply-To".'
+            raise ValueError(msg)
+        convert_field = ModifyEml._convert_field_name(field_name)
+        _bool, value = self._value_exist(convert_field)
+        if _bool is True and value is not None:
+            # transforme la valeur value en list
+            list_value = ModifyEml.list_adresse_from_string(value)
+            list_new_recipients = [
+                x for x in list_value if x != recipient
+            ]  # Ne fait rien, pas d'erreur
+            # transforme la liste modifié en string
+            new_recipients = ",".join(list_new_recipients)
+            return self._set_item_object(value=new_recipients, field=convert_field)
 
         # self.set_item(field_name, new_recipients)
         # current_recipients = self.eml_object[field_name]
@@ -334,15 +304,8 @@ class ModifyEml:
         :param recipient: adresses email (string).
         :param field_name: Champ de destinataire à modifier (string).
         """
-        self._set_item_object(value=recipient, field=field_name)
-
-    # def get_email_message(self):
-    #     """
-    #     Retourne l'objet email avec les modifications appliquées.
-    #     """
-    #     return self.eml.eml_object
-
-    # Obtenir la date en suivant le fuseau horaire et le changement d'heure
+        convert_field = ModifyEml._convert_field_name(field_name)
+        self._set_item_object(value=recipient, field=convert_field)
 
     # Changer la date en suivant le fuseau horaire et le changement d'heure
     def set_date(self, timezone_str="Europe/Paris"):
@@ -391,20 +354,6 @@ class ModifyEml:
             "Bcc",
         ]:
             self.set_item(item)
-
-        # self.set_item("Subject")
-
-        # self.set_item("From")
-
-        # self.set_item("Return-Path")
-
-        # self.set_item("Reply-To")
-
-        # self.set_item("To")
-
-        # self.set_item("Cc")
-
-        # self.set_item("Bcc")
 
     def save(self, new_file_path):
         self._modify()
