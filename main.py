@@ -13,9 +13,10 @@ new_sender = "new_sender@test.fr"
 new_reply_to = "new_reply_to@test.fr"
 new_return_path = "new_return_path@test.fr"
 new_to = "new_to@test.fr", "2x_to@test.fr"
-new_cc = "new_cc@test.fr", "2x_cc@test.fr"
-cc_to_remove = "2x_cc@test.fr"
-another_cc = None
+new_cc = "new_cc@test.fr", "2x_cc@test.fr", "3x_cc@test.fr"
+another_cc = "4x_cc@test.fr"
+and_another_cc = None
+cc_to_remove = "3x_cc@test.fr"
 new_bcc = "new_bcc@test.fr"
 remove_cc_adress = '"adresse_secondaire@test" <adresse_secondaire@test>'
 
@@ -44,9 +45,12 @@ def main(eml_file_pat):
     eml_modifier.set_return_path(new_return_path)
     eml_modifier.set_reply_to(new_reply_to)
     eml_modifier.set_recipient(recipient=new_cc, field_name="Cc")
-    eml_modifier.set_recipient(recipient=another_cc, field_name="Cc")
+    eml_modifier.set_recipient(recipient=another_cc, field_name="Cc")    
     eml_modifier.add_recipient(recipient=new_to, field_name="To")
+    eml_modifier.add_recipient(recipient=new_cc, field_name="Cc")
+    eml_modifier.add_recipient(recipient=cc_to_remove, field_name="Cc")
     eml_modifier.add_recipient(recipient=another_cc, field_name="Cc")
+    eml_modifier.add_recipient(recipient=and_another_cc, field_name="Cc")
     eml_modifier.remove_recipient(recipient=cc_to_remove, field_name="Cc")
     eml_modifier.add_recipient(recipient=new_bcc, field_name="Bcc")
 
