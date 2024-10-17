@@ -5,8 +5,8 @@ To:
 Cc: "adresse_secondaire@test" <adresse_secondaire@test>
 Message-ID: <378490645.617881.1613057499289@mail.yahoo.com>
 Subject: =?UTF-8?Q?test_YAHOO_PJ_nom_avec_caract=C3=A8res_sp=C3=A9ciaux?=
-Reply-To: toto@test.fr
-Return-Path: toto@test.fr
+Reply-To: reply@test.fr
+Return-Path: return_path@test.fr
 MIME-Version: 1.0
 Content-Type: multipart/mixed; 
 	boundary="----=_Part_617880_947492036.1613057499289"
