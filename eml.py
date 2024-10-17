@@ -329,8 +329,7 @@ class ModifyEml:
         :param bcc: Nouveau destinataire caché  (string).
         """
         self.set_date(timezone_str="Europe/Paris")
-        self.set_message_id()
-
+        
         for item in [
             "Date",
             "Message-ID",
