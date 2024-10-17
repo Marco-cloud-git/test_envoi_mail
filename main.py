@@ -38,6 +38,7 @@ def main(eml_file_pat):
     # Créer l'objet à modifier
     eml_modifier = ModifyEml(eml)
     # modifier les valeurs
+    eml_modifier.set_message_id()
     eml_modifier.set_subject(new_subject)
     eml_modifier.set_sender(new_sender)
     eml_modifier.set_return_path(new_return_path)
