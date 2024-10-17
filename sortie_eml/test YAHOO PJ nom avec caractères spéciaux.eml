@@ -1,17 +1,19 @@
-Date: Thu, 11 Feb 2021 15:31:39 +0000 (UTC)
-From: Jean delaged <jeandelaged@yahoo.com>
-To: 
-	"adresse_principale@test" <adresse_principale@test>
-Cc: "adresse_secondaire@test" <adresse_secondaire@test>
-Message-ID: <378490645.617881.1613057499289@mail.yahoo.com>
-Subject: =?UTF-8?Q?test_YAHOO_PJ_nom_avec_caract=C3=A8res_sp=C3=A9ciaux?=
-Reply-To: reply@test.fr
-Return-Path: return_path@test.fr
+Date: Thu, 17 Oct 2024 11:36:24 +0200
+From: new_sender@test.fr
+To: "adresse_principale@test" <adresse_principale@test>, new_to@test.fr,
+ 2x_to@test.fr
+Cc: new_cc@test.fr
+Message-ID: <172915778480.16832.3239151627540908259@Zircon>
+Subject: New subject
+Reply-To: new_reply_to@test.fr
+Return-Path: new_return_path@test.fr
 MIME-Version: 1.0
 Content-Type: multipart/mixed; 
 	boundary="----=_Part_617880_947492036.1613057499289"
 References: <378490645.617881.1613057499289.ref@mail.yahoo.com>
-X-Mailer: WebService/1.1.17712 YMailNorrin Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.152 Safari/537.36
+X-Mailer: WebService/1.1.17712 YMailNorrin Mozilla/5.0 (Windows NT 10.0;
+ Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.152
+ Safari/537.36
 Content-Length: 977
 X-Antivirus: Avast (VPS 210211-2, 11/02/2021), Inbound message
 X-Antivirus-Status: Clean

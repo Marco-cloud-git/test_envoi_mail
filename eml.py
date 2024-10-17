@@ -4,23 +4,23 @@ from email import policy
 from email.parser import BytesParser
 from email.utils import format_datetime, make_msgid
 import os
-from text_encoding import TextEncoding
 from datetime import datetime
 import pytz
 from functools import wraps
+from email.header import decode_header
 
 
 class Eml:
     def __init__(self, file_path):
         self.file_path = file_path
         self.eml_data = self.load_eml(file_path)
-        self.get_metadata()
+        self.get_data()
 
     def load_eml(self, file_path):
         with open(file_path, "rb") as f:
             return BytesParser(policy=policy.default).parse(f)
 
-    def get_metadata(self):
+    def get_data(self):
         self.name = self.get_name()
         self.sender = self.get_sender()
         self.to = self.get_to()
@@ -33,17 +33,24 @@ class Eml:
         self.subject = self.get_subject()
         # self.body = self.get_body()
 
-    def print_eml(self):
-        print("Name:", self.name)
-        print("Sender:", self.sender)
-        print("To:", self.to)
-        print("Cc:", self.cc)
-        print("Bcc:", self.bcc)
-        print("Reply-To:", self.reply_to)
-        print("Return-Path:", self.return_path)
-        print("Date:", self.date)
-        print("Message-ID:", self.message_id)
-        print("Subject:", self.subject)
+    def print_eml_data(self, eml_data=False):
+        """
+        Affiche les valeurs des paramétres de l'instances.
+        :param eml_data: par defaut: False, le texte de l'eml n'est pas affiché.
+        """
+        for item in self.__dict__:
+            if item.startswith("_"):
+                continue  # Ignore les attributs privés
+
+            if eml_data is True:
+                self._show_attribute(item)
+            else:
+                if item != "eml_data":
+                    self._show_attribute(item)
+
+    def _show_attribute(self, item):
+        value = getattr(self, item, None)
+        print(item, value)
 
     def get_name(self):
         return os.path.basename(self.file_path)
@@ -126,83 +133,76 @@ class ModifyEml:
 
         return wrapper
 
-    def modify(
-        self, sender=None, return_path=None, reply_to=None, to=None, cc=None, bcc=None
-    ):
+    def _convert_field_name(field):
         """
-        Modifie les adresses de l'expediteur, du reply-to, du return_path de l'email, du destinataire principale, du destinataire secondaire, du destinataire caché, de la date et du message_id.
-        :param sender: Nouvelle adresse email de l'expéditeur (string).
-        :param return_path: Nouvelle adresse email de réponse en cas d'erreur (string).
-        :param reply_to: Nouvelle adresse email pour la réponse (string).
-        :param to: Nouveau destinataire principale (string).
-        :param cc: Nouveau destinataire secondaire  (string).
-        :param bcc: Nouveau destinataire caché  (string).
+        Converti les noms de certains champs des emls en parametres de l'objet eml_objet de l'instance.
+        :param field : nom du champs de l'eml à convertir. (string)
         """
-        self.set_date(timezone_str="Europe/Paris")
-        self.set_message_id()
-        self.modify_sender(sender=sender, return_path=return_path, reply_to=reply_to)
+        if field in [
+            "To",
+            "Cc",
+            "Bcc",
+            "From",
+            "Return-Path",
+            "Reply-To",
+            "Date",
+            "Subject",
+            "Message-ID",
+        ]:
+            switch = {
+                "To": "to",
+                "Cc": "cc",
+                "Bcc": "bcc",
+                "From": "sender",
+                "Return-Path": "return_path",
+                "Reply-To": "reply_to",
+                "Date": "date",
+                "Subject": "subject",
+                "Message-ID": "message_id",
+            }
+            return switch.get(field, "Not a field")
+        else:
+            return field
 
-    def modify_sender(self, sender=None, return_path=None, reply_to=None):
+    def _value_exist(self, field):
         """
-        Modifie les adresses de l'expediteur, du reply-to et du du return_path de l'email.
-        :param sender: Nouvelle adresse email de l'expéditeur (string).
-        :param return_path: Nouvelle adresse email de réponse en cas d'erreur (string).
-        :param reply_to: Nouvelle adresse email pour la réponse (string).
+        Test si le parametre existe dans l'object d'une instance et contient une valeur.
+        Ceci évite de rechercher dans le texte du mail si le champs existe.
+        :param field: le champs à tester (string).
+        :param value: nouvelle valeur de la balise.
         """
-        if return_path is not None:
-            self.set_mail_sender(sender)
-        if return_path is not None:
-            self.set_return_path(return_path)
-        if reply_to is not None:
-            self.set_reply_to(reply_to)
+        _bool = False
+        value = None
+        if field is not None:
+            value = getattr(self.eml_object, field, None)
+            if isinstance(value, list) or isinstance(value, tuple):
+                value = ",".join(value)
+            if value is not None and len(value) > 0:
+                _bool = True
+        return _bool, value
 
-    def set_mail_sender(self, mail_sender):
+    def set_item(self, field):
         """
-        Modifie l'expéditeur de l'email.
-        :param mail_sender: Nouvelle adresse email de l'expéditeur (string).
+        Modifie la valeur d'une balise dans le header de l'email.
+        La valeur doit exister dans l'instance et la nouvelle valeur ne doit pas etre nulle.
+        :param item: nom de la balise à modifier (string).
+        :param value: nouvelle valeur de la balise.
         """
-        self.eml_object.eml_data.replace_header("From", mail_sender)
+        item = ModifyEml._convert_field_name(field)
+        _bool, value = self._value_exist(item)
+        if _bool is True and value is not None:
+            self.eml_object.eml_data.replace_header(field, value)
 
-    def set_return_path(self, return_path):
+    def _set_item_object(self, value, field):
         """
-        Modifie les adresses de retour de l'email.
-        :param new_reply_to: Nouvelle adresse email de réponse du mail (string).
-        :param new_return_path: Nouvelle adresse email de retour du mail en cas d'erreur (string).
+        Modifie la valeur d'un paramétre dans l'instance.
+        La valeur doit exister dans l'instance et la nouvelle valeur ne doit pas etre nulle.
+        :param item: nom de la balise à modifier (string).
+        :param value: nouvelle valeur de la balise (string).
         """
-        if (
-            self.eml_object.return_path is not None
-            and self.eml_object.return_path != ""
-        ):
-            self.eml_object.eml_data.replace_header("Return-Path", return_path)
-
-    def set_reply_to(self, reply_to):
-        """
-        Modifie les adresses de retour de l'email.
-        :param new_reply_to: Nouvelle adresse email de réponse du mail (string).
-        :param new_return_path: Nouvelle adresse email de retour du mail en cas d'erreur (string).
-        """
-        if self.eml_object.reply_to is not None and self.eml_object.reply_to != "":
-            self.eml_object.eml_data.replace_header("Reply-To", reply_to)
-
-    @with_recipient_list
-    def add_recipient(self, recipient, field_name="To"):
-        """
-        Ajoute un destinataire à un champ spécifique (To, Cc, ou Bcc).
-        :param recipient: Adresse email du destinataire (string).
-        :param field_name: Champ de destinataire (par défaut 'To').
-        """
-        if field_name not in ["To", "Cc", "Bcc"]:
-            raise ValueError("Le champ de destinataire doit être 'To', 'Cc', ou 'Bcc'")
-
-        if self.eml_object.eml_data[field_name] is not None and recipient is not None:
-            # Récupérer l'adresse existante et ajouter le destinataire si nécessaire
-            current_recipients = self.eml_object.eml_data[field_name]
-            if current_recipients:
-                new_recipients = f"{current_recipients}, {recipient}"
-            else:
-                new_recipients = recipient
-
-            self.eml_object.eml_data.replace_header(field_name, new_recipients)
+        _bool, _ = self._value_exist(field)
+        if _bool is True and value is not None:
+            setattr(self.eml_object, field, value)
 
     def list_adresse_from_string(adress):
         """
@@ -213,73 +213,96 @@ class ModifyEml:
         list_adress = list(map(str.strip, adress.split(",")))
         return list_adress
 
-    # def set_recipients(self, recipients, field_name='To'):
-    #     """
-    #     Remplace les destinataires d'un champ spécifique (To, Cc, ou Bcc).
-    #     :param recipients: Liste d'adresses email (list de strings).
-    #     :param field_name: Champ de destinataire à modifier (par défaut 'To').
-    #     """
-    #     if field_name not in ['To', 'Cc', 'Bcc']:
-    #         raise ValueError("Le champ de destinataire doit être 'To', 'Cc', ou 'Bcc'")
+    def set_subject(self, subject):
+        """
+        Modifie le sujet de l'email.
+        :param subject: Nouveau sujet de l'email.
+        """
+        self._set_item_object(value=subject, field="subject")
 
-    #     # Joindre les nouvelles adresses email
-    #     new_recipients = ', '.join(recipients)
-    #     self.eml.eml_object.replace_header(field_name, new_recipients)
+    def set_sender(self, sender):
+        """
+        Modifie l'expéditeur de l'email.
+        :param sender: Nouvelle adresse email de l'expéditeur (string).
+        """
+        self._set_item_object(value=sender, field="sender")
 
-    # def remove_recipient(self, recipient, field_name='To'):
-    #     """
-    #     Supprime un destinataire spécifique d'un champ (To, Cc, ou Bcc).
-    #     :param recipient: Adresse email du destinataire à supprimer (string).
-    #     :param field_name: Champ de destinataire où chercher l'adresse (par défaut 'To').
-    #     """
-    #     if field_name not in ['To', 'Cc', 'Bcc']:
-    #         raise ValueError("Le champ de destinataire doit être 'To', 'Cc', ou 'Bcc'")
+    def set_return_path(self, return_path):
+        """
+        Modifie les adresses de retour de l'email.
+        :param new_reply_to: Nouvelle adresse email de réponse du mail (string).
+        :param new_return_path: Nouvelle adresse email de retour du mail en cas d'erreur (string).
+        """
+        self._set_item_object(value=return_path, field="return_path")
 
-    #     current_recipients = self.eml.eml_object[field_name]
-    #     if current_recipients:
-    #         # Retirer le destinataire et réenregistrer les adresses
-    #         updated_recipients = ', '.join(
-    #             addr.strip() for addr in current_recipients.split(',') if addr.strip() != recipient
-    #         )
-    #         self.eml.eml_object.replace_header(field_name, updated_recipients)
+    def set_reply_to(self, reply_to):
+        """
+        Modifie les adresses de retour de l'email.
+        :param new_reply_to: Nouvelle adresse email de réponse du mail (string).
+        :param new_return_path: Nouvelle adresse email de retour du mail en cas d'erreur (string).
+        """
+        self._set_item_object(value=reply_to, field="reply_to")
 
-    # def remove_all_recipient(self, recipient):
-    #     fields=['To', 'Cc', 'Bcc']
-    #     for field_name in fields:
-    #         self.remove_recipient(self, recipient, field_name)
+    @with_recipient_list
+    def add_recipient(self, recipient, field_name):
+        """
+        Ajoute un destinataire à un champ spécifique (To, Cc, ou Bcc).
+        :param recipient: Adresse email du destinataire (string).
+        :param field_name: Champ de destinataire.
+        """
+        if not field_name in ["To", "Cc", "Bcc"]:
+            msg = f'field_name : {field_name} doit être : "To","Cc","Bcc".'
+            raise ValueError(msg)
+        convert_field = ModifyEml._convert_field_name(field_name)
+        _bool, list_current_recipients = self._value_exist(convert_field)
+        if _bool is True:
+            if recipient is not None:
+                new_recipients = f"{list_current_recipients}, {recipient}"
+            else:
+                new_recipients = recipient
+            return self._set_item_object(value=new_recipients, field=convert_field)
 
-    # def get_email_message(self):
-    #     """
-    #     Retourne l'objet email avec les modifications appliquées.
-    #     """
-    #     return self.eml.eml_object
+    def remove_recipient(self, recipient, field_name):
+        """
+        Supprime un destinataire spécifique d'un champ (To, Cc, ou Bcc).
+        :param recipient: Adresse email du destinataire à supprimer (string).
+        :param field_name: Champ de destinataire où chercher l'adresse.
+        """
+        if not field_name in ["To", "Cc", "Bcc", "Return-Path", "Reply-To"]:
+            msg = f'field_name : {field_name} doit être : "To", "Cc", "Bcc", "Return-Path", "Reply-To".'
+            raise ValueError(msg)
+        convert_field = ModifyEml._convert_field_name(field_name)
+        _bool, value = self._value_exist(convert_field)
+        if _bool is True and value is not None:
+            # transforme la valeur value en list
+            list_value = ModifyEml.list_adresse_from_string(value)
+            list_new_recipients = [
+                x for x in list_value if x != recipient
+            ]  # Ne fait rien, pas d'erreur
+            # transforme la liste modifié en string
+            new_recipients = ",".join(list_new_recipients)
+            return self._set_item_object(value=new_recipients, field=convert_field)
 
-    # Convertir la date actuelle du mail en timezone-aware
-    # def convert_date_to_timezone(date_str, timezone_str):
-    #     # Exemple : date_str = 'Tue, 15 Mar 2023 10:00:00'
-    #     date_format = "%a, %d %b %Y %X"
-    #     naive_date = datetime.strptime(date_str, date_format)
-
-    #     # Rendre la date "timezone-aware"
-    #     local_tz = pytz.timezone(timezone_str)
-    #     aware_date = local_tz.localize(naive_date)
-
-    # return aware_date
-
-    # Obtenir la date en suivant le fuseau horaire et le changement d'heure
-    def get_date(self, timezone_str="Europe/Paris"):
-        local_tz = pytz.timezone(timezone_str)
-        datetime_now = datetime.now(local_tz)
-
-        # Formater la date selon le format RFC 2822 pour l’en-tête email
-        return format_datetime(datetime_now)
+    def set_recipient(
+        self,
+        recipient,
+        field_name,
+    ):
+        """
+        Remplace les destinataires d'un champ spécifique (To, Cc, ou Bcc).
+        :param recipient: adresses email (string).
+        :param field_name: Champ de destinataire à modifier (string).
+        """
+        convert_field = ModifyEml._convert_field_name(field_name)
+        self._set_item_object(value=recipient, field=convert_field)
 
     # Changer la date en suivant le fuseau horaire et le changement d'heure
     def set_date(self, timezone_str="Europe/Paris"):
-        new_date = self.get_date(timezone_str)
-        print(f"new_date : {new_date}")
+        local_tz = pytz.timezone(timezone_str)
+        datetime_now = datetime.now(local_tz)
+        new_date = format_datetime(datetime_now)
         # Mettre à jour l'en-tête "Date"
-        self.eml_object.eml_data.replace_header("Date", new_date)
+        self._set_item_object(value=new_date, field="date")
 
     def set_message_id(self):
         """
@@ -287,15 +310,70 @@ class ModifyEml:
         Modifie le champ 'Message-ID' de l'email.
         :param new_message_id: Nouveau Message-ID pour l'email (string).
         """
-
         # Générer un Message-ID unique
         new_message_id = make_msgid()
-
         # Remplacer le Message-ID de l'email
-        self.eml_object.eml_data.replace_header("Message-ID", new_message_id)
+        self._set_item_object(value=new_message_id, field="message_id")
+
+    def _modify(
+        self,
+    ):
+        """
+        Modifie le sujet, les adresses de l'expediteur, du reply-to, du return_path de l'email, du destinataire principale, du destinataire secondaire, du destinataire caché, de la date et du message_id.
+        :param subject: Nouvelle sujet du mail (string).
+        :param sender: Nouvelle adresse email de l'expéditeur (string).
+        :param return_path: Nouvelle adresse email de réponse en cas d'erreur (string).
+        :param reply_to: Nouvelle adresse email pour la réponse (string).
+        :param to: Nouveau destinataire principale (string).
+        :param cc: Nouveau destinataire secondaire  (string).
+        :param bcc: Nouveau destinataire caché  (string).
+        """
+        self.set_date(timezone_str="Europe/Paris")
+        self.set_message_id()
+
+        for item in [
+            "Date",
+            "Message-ID",
+            "Subject",
+            "From",
+            "Return-Path",
+            "Reply-To",
+            "To",
+            "Cc",
+            "Bcc",
+        ]:
+            self.set_item(item)
 
     def save(self, new_file_path):
+        self._modify()
         if not hasattr(self.eml_object, "as_bytes"):
             raise AttributeError("L'objet EML ne possède pas de méthode 'as_bytes'.")
         with open(new_file_path, "wb") as f:
             f.write(self.eml_object.as_bytes())
+
+
+class TextEncoding:
+    @staticmethod
+    def decode_header(encoded_string):
+        # Vérifier si la chaîne est None avant le décodage
+        if encoded_string is None:
+            return ""  # Retourne une chaîne vide si l'en-tête n'existe pas
+        decoded_fragments = []
+        for part, encoding in decode_header(encoded_string):
+            if isinstance(part, bytes):
+                decoded_fragments.append(part.decode(encoding or "utf-8"))
+            else:
+                decoded_fragments.append(part)
+        return "".join(decoded_fragments)
+
+
+class InvalidEncodingError(Exception):
+    """A custom exception class to report Invalid Encoding errors."""
+
+    def __init__(self, encoded_value: str = ""):
+        self.encoded_value = encoded_value
+        self.message = "Invalid encoding used"
+        super().__init__(self.message)
+
+    def __str__(self):
+        return f"{self.message}. Encoded string causing the error: {self.encoded_value}"
