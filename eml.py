@@ -469,3 +469,54 @@ class InvalidEncodingError(Exception):
 
     def __str__(self):
         return f"{self.message}. Encoded string causing the error: {self.encoded_value}"
+
+
+def modify(
+    file_path,
+    destination_folder,
+    subject=None,
+    sender=None,
+    return_path=None,
+    reply_to=None,
+    to=None,
+    cc=None,
+    bcc=None,
+    message_id=True,
+):
+    """
+    Fonction simple pour modifier les emls.
+    Ne prend en charge que les fonctions set, mais pas add ou remove.
+    :param file_path: chemin vers l'eml (string).
+    :param destination_folder: chemin vers le dossier de destination de l'eml pour la sauvegarde (string).
+    :param subject: valeur du sujet du mail à modifier,None par défaut (string).
+    :param sender: valeur de l'expéditeur (From) du mail à modifier, None par défaut (string).
+    :param return_path: valeur de réponse en cas d'erreur à modifier, None par défaut (string).
+    :param reply_to: valeur de réponse du mail à modifier, None par défaut (string).
+    :param to: valeur du destinataire principale du mail à modifier, None par défaut (string).
+    :param cc: valeur du destinataire secondaire du mail à modifier, None par défaut (string).
+    :param bcc: valeur du destinataire caché du mail à modifier, None par défaut (string).
+    :param message_id: True permet de modifier le Message-ID, True par défaut (boolean).
+    """
+    # Charger l'email d'entrée
+    eml = Eml(file_path)
+    # Eml.print_eml_data(eml, eml_data=False)
+    name = eml.get_name()
+    # # Construire le chemin de destination et sauvegarder
+    destination_file_path = os.path.join(destination_folder, name)
+
+    # Créer l'objet à modifier
+    eml_modifier = ModifyEml(eml)
+    # modifier les valeurs
+
+    eml_modifier.set_subject(subject)
+    eml_modifier.set_from(sender)
+    eml_modifier.set_return_path(return_path)
+    eml_modifier.set_reply_to(reply_to)
+    eml_modifier.set_to(to)
+    eml_modifier.set_cc(cc)
+    eml_modifier.set_bcc(bcc)
+   
+    if message_id == True:
+        eml_modifier.set_message_id()
+    
+    eml_modifier.save(destination_file_path)

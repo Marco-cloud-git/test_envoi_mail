@@ -1,9 +1,8 @@
-Date: Thu, 17 Oct 2024 20:36:04 +0200
+Date: Fri, 18 Oct 2024 10:46:06 +0200
 From: new_sender@test.fr
-To: "adresse_principale@test" <adresse_principale@test>, new_to@test.fr,
- 2x_to@test.fr
-Cc: 4x_cc@test.fr, new_cc@test.fr, 2x_cc@test.fr
-Message-ID: <172919016440.1532.17361609488146869500@Zircon>
+To: new_to@test.fr, 2x_to@test.fr
+Cc: new_cc@test.fr, 2x_cc@test.fr, 3x_cc@test.fr
+Message-ID: <172924116634.19312.5850593069346370239@Zircon>
 Subject: New subject
 Reply-To: new_reply_to@test.fr
 Return-Path: new_return_path@test.fr
