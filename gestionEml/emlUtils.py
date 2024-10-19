@@ -6,21 +6,9 @@ import os
 def file_exist(path, error=False):
     _bool = os.path.isfile(path)
     if _bool is False and error is True:
-        msg = f"Le fichier n'est pas trouvé : {path}"
+        msg = f"Chemin non trouvé : {path}"
         raise FileNotFoundError(msg)
     return _bool
-
-
-def directory_exist(path):
-    if not os.path.isdir(path):
-        msg = f"Le dossier n'est pas trouvé : {path}"
-        raise FileNotFoundError(msg)
-
-
-def controle_directory(dict_directory):
-    # Vérifier que le répertoire de sortie existe
-    for name, path in dict_directory.items():
-        directory_exist(path)
 
 
 def define_file_path(directory_path, file_name):

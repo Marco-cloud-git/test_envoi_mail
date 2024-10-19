@@ -9,6 +9,8 @@ import pytz
 from functools import wraps
 from email.header import decode_header
 
+from gestionEml.emlUtils import define_file_path
+
 
 class Eml:
     def __init__(self, file_path):
@@ -17,12 +19,16 @@ class Eml:
         self.get_data()
 
     def load_eml(self, file_path):
+        """
+        Ouvrir un fichier eml en mode binaire et permettre l'analyse.
+        :param file_path: chemin vers le fichier (string).
+        """
         with open(file_path, "rb") as f:
             return BytesParser(policy=policy.default).parse(f)
 
     def get_data(self):
         """
-        Déclaration de tous les paramétres du header de l'eml dans l'instance
+        Déclaration de tous les paramètres du header de l'eml dans l'instance
         """
         self.name = self.get_name()
         self.sender = self.get_sender()
@@ -102,10 +108,12 @@ class Eml:
     def _get_addresses(self, field_name):
         """
         Methode pour lire les valeurs des champs To, CC et Bcc.
+        Retourne une liste.
+        :param field_name: nom du champs (string). 
         """
         addresses = self.eml_data[field_name]
         if addresses:
-            return [TextEncoding.decode_header(addr) for addr in addresses.split(",")]
+            return [TextEncoding.decode_header(addr) for addr in addresses.split(", ")]
         return []
 
     def as_bytes(self):
@@ -118,11 +126,11 @@ class ModifyEml:
         Initialise l'objet avec les valeurs issus de la classe Eml,
         contient file_path : chemin vers l'eml,
         eml_data : texte de l'eml,
-        name : nom de l'eml
-        et des paramètress extraits du header :  sender,  to, cc, bcc, reply_to, return_path, date, message_id, subject
+        name : nom de l'eml,
+        paramètress extraits du header :  sender,  to, cc, bcc, reply_to, return_path, date, message_id, subject.
         """
         if eml_object is None:
-            raise ValueError("L'objet EML fourni est None.")
+            raise ValueError("L'objet eml fourni est None.")
         else:
             self.eml_object = eml_object  # Composition : `ModifyEml` contient `Eml`
 
@@ -186,7 +194,7 @@ class ModifyEml:
         if field is not None:
             value = getattr(self.eml_object, field, None)
             if isinstance(value, list) or isinstance(value, tuple):
-                value = ", ".join(value)
+                value = ", ".join(value).strip()
             if value is not None and len(value) > 0:
                 _bool = True
         return _bool, value
@@ -291,7 +299,7 @@ class ModifyEml:
                 x for x in list_value if x != recipient
             ]  # Ne fait rien, pas d'erreur
             # transforme la liste modifié en string
-            new_recipients = ", ".join(list_new_recipients)
+            new_recipients = ", ".join(list_new_recipients).strip()
             return self._set_item(value=new_recipients, field=convert_field)
 
     def remove_to(self, recipient):
@@ -430,45 +438,16 @@ class ModifyEml:
             self.update_header_field(item)
 
     def save(self, new_file_path):
+        """
+        Enregistrer un objet email au format eml.
+        :param new_file_path: chemin de destination de l'eml.
+        """
         self._modify_header()
         if not hasattr(self.eml_object, "as_bytes"):
-            raise AttributeError("L'objet EML ne possède pas de méthode 'as_bytes'.")
+            raise AttributeError(
+                "L'objet EML ne possède pas de méthode 'as_bytes'.")
         with open(new_file_path, "wb") as f:
             f.write(self.eml_object.as_bytes())
-
-
-class TextEncoding:
-    @staticmethod
-    def decode_header(encoded_string):
-        """
-        Permet de lire les valeurs éventuellement encondés contenu dans le header des emls.
-        64 bits :  caractères alphanumériques et de symboles (+, /, =) pour représenter les octets binaires, ex : SGVsbG8gd29ybGQh
-        Quoted-Printable : caractères ASCII suivis d’un “=” suivi d’un chiffre hexadécimal représentant le code Unicode du caractère original, ex : =?iso-8859-1?q?école=?
-        UTF-8 : peuvent contenir des caractères tels que des accents, des diacritiques, des caractères spéciaux, ainsi que des symboles et des lettres non latines, ex : \xc3\xa9cole
-
-        """
-        # Vérifier si la chaîne est None avant le décodage
-        if encoded_string is None:
-            return ""  # Retourne une chaîne vide si l'en-tête n'existe pas
-        decoded_fragments = []
-        for part, encoding in decode_header(encoded_string):
-            if isinstance(part, bytes):
-                decoded_fragments.append(part.decode(encoding or "utf-8"))
-            else:
-                decoded_fragments.append(part)
-        return "".join(decoded_fragments)
-
-
-class InvalidEncodingError(Exception):
-    """A custom exception class to report Invalid Encoding errors."""
-
-    def __init__(self, encoded_value: str = ""):
-        self.encoded_value = encoded_value
-        self.message = "Invalid encoding used"
-        super().__init__(self.message)
-
-    def __str__(self):
-        return f"{self.message}. Encoded string causing the error: {self.encoded_value}"
 
 
 def modify(
@@ -515,8 +494,111 @@ def modify(
     eml_modifier.set_to(to)
     eml_modifier.set_cc(cc)
     eml_modifier.set_bcc(bcc)
-   
+
     if message_id == True:
         eml_modifier.set_message_id()
-    
+
     eml_modifier.save(destination_file_path)
+
+    # obtenir les informations nécessaires pour les tests
+    date = eml.get_date()
+    message_id = eml.get_message_id()
+    return date, message_id
+
+
+def execute_eml_modification(process, file_name, entry_folder_path, destination_folder_path):
+    """
+    Traite la modification des fichiers eml en fonction du nom de fichier fourni.
+    Retourne une liste de dictionaire contenant les dates et les message-id des emls.
+    :param process: Fonction à appliquer au fichier eml (string).
+    :param file_name: Nom de fichier ou liste de noms de fichiers eml à traiter (string ou list).
+    :param entry_folder_path: Chemin du dossier d'entrée (string).
+    :param destination_folder_path: Chemin du dossier de destination (string).
+    """
+    list_value = []
+    if isinstance(file_name, list):
+        for name in file_name:
+            date, message_id = _modify_eml(process=process, file_name=name, entry_folder_path=entry_folder_path, destination_folder_path=destination_folder_path,
+                                           )
+            dictionary = {"date": date, "message_id": message_id}
+            list_value.append(dictionary)
+    else:
+        date, message_id = _modify_eml(process=process, file_name=file_name, entry_folder_path=entry_folder_path,
+                                       destination_folder_path=destination_folder_path)
+        dictionary = {"date": date, "message_id": message_id}
+        list_value.append(dictionary)
+    return list_value
+
+
+def _modify_eml(process, file_name, entry_folder_path, destination_folder_path):
+    """
+    Modifie un fichier eml en utilisant la fonction de traitement fournie.
+    Retourne la date et le message-id de l'eml.
+    :param process: Fonction à appliquer au fichier eml.
+    :param file_name: Nom du fichier eml à traiter (string).
+    :param entry_folder_path: Chemin du dossier d'entrée (string).
+    :param destination_folder_path: Chemin du dossier de destination (string).
+    """
+
+    if file_name is not None:
+        file_path = define_file_path(
+            directory_path=entry_folder_path, file_name=file_name
+        )
+    else:
+        msg = f"Erreur sur file_name : {file_name}"
+        raise ValueError(msg)
+
+    try:
+        date, message_id = _wrapper_process(process=process, file_path=file_path,
+                                            destination_folder_path=destination_folder_path)
+        return date, message_id
+    except Exception as e:
+        msg = f"Erreur lors du traitement de l'eml {file_path}: {e}"
+        print(msg)
+
+
+def _wrapper_process(process, file_path, destination_folder_path):
+    """
+    Wrapper pour appeler les fonctions de traitement.
+    Retourne la date et le message-id de l'eml.
+    :param process: Fonction à appliquer au fichier eml (string).
+    :param file_path: Chemin du fichier eml à traiter (string).
+    :param destination_folder_path: Chemin du dossier de destination (string).
+    """
+    date, message_id = process(eml_file_path=file_path,
+                               destination_folder_path=destination_folder_path)
+    return date, message_id
+
+
+class TextEncoding:
+    @staticmethod
+    def decode_header(encoded_string):
+        """
+        Permet de lire les valeurs éventuellement encondés contenu dans le header des emls.
+        64 bits :  caractères alphanumériques et de symboles (+, /, =) pour représenter les octets binaires, ex : SGVsbG8gd29ybGQh
+        Quoted-Printable : caractères ASCII suivis d’un “=” suivi d’un chiffre hexadécimal représentant le code Unicode du caractère original, ex : =?iso-8859-1?q?école=?
+        UTF-8 : peuvent contenir des caractères tels que des accents, des diacritiques, des caractères spéciaux, ainsi que des symboles et des lettres non latines, ex : \xc3\xa9cole
+
+        """
+        # Vérifier si la chaîne est None avant le décodage
+        if encoded_string is None:
+            return ""  # Retourne une chaîne vide si l'en-tête n'existe pas
+        decoded_fragments = []
+        for part, encoding in decode_header(encoded_string):
+            if isinstance(part, bytes):
+                decoded_fragments.append(part.decode(encoding or "utf-8"))
+            else:
+                decoded_fragments.append(part)
+        return "".join(decoded_fragments)
+
+
+class InvalidEncodingError(Exception):
+    """A custom exception class to report Invalid Encoding errors."""
+
+    def __init__(self, encoded_value: str = ""):
+        self.encoded_value = encoded_value
+        self.message = "Invalid encoding used"
+        super().__init__(self.message)
+
+    def __str__(self):
+        return f"{self.message}. Encoded string causing the error: {self.encoded_value}"

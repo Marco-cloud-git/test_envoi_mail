@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from functools import wraps
-from utils import controle_directory
+from depotEml.configUtils import controle_directory
 
 # Chemins des dossiers
-entry_folder_path = "entree_eml"
-destination_folder_path = "sortie_eml"
+entry_folder_path = "depotEml/entree"
+destination_folder_path = "depotEml/sortie"
 
 dict_directory = {
     "entry_folder_path": entry_folder_path,
