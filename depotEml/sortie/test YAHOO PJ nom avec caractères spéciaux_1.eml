@@ -1,0 +1,46 @@
+Date: Sat, 19 Oct 2024 18:41:47 +0200
+From: new_sender@test.fr
+To: "adresse_principale@test" <adresse_principale@test>, new_to@test.fr,
+ 2x_to@test.fr
+Cc: 4x_cc@test.fr, new_cc@test.fr, 2x_cc@test.fr
+Message-ID: <172935610788.21808.4635083182450233383@PWVD1547.maif.local>
+Subject: New subject
+Reply-To: new_reply_to@test.fr
+Return-Path: new_return_path@test.fr
+MIME-Version: 1.0
+Content-Type: multipart/mixed; 
+	boundary="----=_Part_617880_947492036.1613057499289"
+References: <378490645.617881.1613057499289.ref@mail.yahoo.com>
+X-Mailer: WebService/1.1.17712 YMailNorrin Mozilla/5.0 (Windows NT 10.0;
+ Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.152
+ Safari/537.36
+Content-Length: 977
+X-Antivirus: Avast (VPS 210211-2, 11/02/2021), Inbound message
+X-Antivirus-Status: Clean
+
+------=_Part_617880_947492036.1613057499289
+Content-Type: multipart/alternative; 
+	boundary="----=_Part_617879_111416188.1613057499227"
+
+------=_Part_617879_111416188.1613057499227
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+Ceci est un test.
+------=_Part_617879_111416188.1613057499227
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+<html><head></head><body><div class="yahoo-style-wrap" style="font-family:Helvetica Neue, Helvetica, Arial, sans-serif;font-size:16px;"><div dir="ltr" data-setdir="false">Ceci est un test.</div></div></body></html>
+------=_Part_617879_111416188.1613057499227--
+
+------=_Part_617880_947492036.1613057499289
+Content-Type: text/plain
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment;
+ filename="=?UTF-8?Q?&=C3=A9=C3=A7!;@=C3=A0=C3=A8.txt?="
+Content-ID: <d677e674-2160-43e9-da28-7c05548a73a1@yahoo.com>
+
+Q2VjaSBlc3QgdW4gdGVzdC4=
+
+------=_Part_617880_947492036.1613057499289--
