@@ -3,13 +3,14 @@
 from email import policy
 from email.parser import BytesParser
 from email.utils import format_datetime, make_msgid
-import os
+from os import path
+from pathlib import Path
 from datetime import datetime
 import pytz
 from functools import wraps
 from email.header import decode_header
 
-from gestionEml.emlUtils import define_file_path
+from gestionEml.emlUtils import define_file_path, increment_file_name
 
 
 class Eml:
@@ -62,7 +63,7 @@ class Eml:
         print(item, value)
 
     def get_name(self):
-        return os.path.basename(self.file_path)
+        return path.basename(self.file_path)
 
     def get_sender(self):
         return TextEncoding.decode_header(self.eml_data["From"])
@@ -109,7 +110,7 @@ class Eml:
         """
         Methode pour lire les valeurs des champs To, CC et Bcc.
         Retourne une liste.
-        :param field_name: nom du champs (string). 
+        :param field_name: nom du champs (string).
         """
         addresses = self.eml_data[field_name]
         if addresses:
@@ -182,24 +183,24 @@ class ModifyEml:
         else:
             return field
 
-    def _value_exist(self, field):
+    def _value_exists(self, field):
         """
         Test si le champs existe dans eml_object d'une instance.
         Retourne un booléen correspond au test et la valeur obtenue.
         Ceci évite de rechercher dans le texte du mail si le champs existe et de perdre du temps à obtenir la valeur.
         :param field: le champs à tester (string).
         """
-        _bool = False
+        exists = False
         value = None
         if field is not None:
             value = getattr(self.eml_object, field, None)
             if isinstance(value, list) or isinstance(value, tuple):
                 value = ", ".join(value).strip()
             if value is not None and len(value) > 0:
-                _bool = True
-        return _bool, value
+                exists = True
+        return exists, value
 
-    def _already_exist(value, list_adresses):
+    def _already_exists(value, list_adresses):
         """
         Test si la valeur n'existe pas dans une liste.
         list_adresses est converti en liste si c'est une chaine de caractère.
@@ -207,15 +208,15 @@ class ModifyEml:
         :param value: valeur à tester (string ou liste).
         :param list_adresses: liste d'adresses à comparer.
         """
-        _bool = False
+        exists = False
 
         if value is not None:
             if isinstance(list_adresses, str):
                 list_adresses = ModifyEml.parse_email_list(list_adresses)
 
             if isinstance(list_adresses, list) or isinstance(list_adresses, tuple):
-                _bool = value in list_adresses
-        return _bool
+                exists = value in list_adresses
+        return exists
 
     def update_header_field(self, field):
         """
@@ -224,8 +225,8 @@ class ModifyEml:
         :param field: nom du champs à modifier (string).
         """
         item = ModifyEml._convert_field_name(field)
-        _bool, value = self._value_exist(item)
-        if _bool is True and value is not None:
+        exists, value = self._value_exists(item)
+        if exists is True and value is not None:
             self.eml_object.eml_data.replace_header(field, value)
 
     def parse_email_list(adress):
@@ -248,12 +249,12 @@ class ModifyEml:
             msg = f'field_name : {field_name} doit être : "To", "Cc", "Bcc".'
             raise ValueError(msg)
         convert_field = ModifyEml._convert_field_name(field_name)
-        _bool, list_current_recipients = self._value_exist(convert_field)
-        recipient_already_exist = ModifyEml._already_exist(
+        exists, list_current_recipients = self._value_exists(convert_field)
+        recipient_already_exists = ModifyEml._already_exists(
             value=recipient, list_adresses=list_current_recipients
         )
 
-        if _bool is True and recipient_already_exist is False:
+        if exists is True and recipient_already_exists is False:
             if recipient is not None:
                 new_recipients = f"{list_current_recipients}, {recipient}"
             else:
@@ -291,8 +292,8 @@ class ModifyEml:
         :param field_name: Champ de destinataire où chercher l'adresse.
         """
         convert_field = ModifyEml._convert_field_name(field_name)
-        _bool, value = self._value_exist(convert_field)
-        if _bool is True and value is not None:
+        exists, value = self._value_exists(convert_field)
+        if exists is True and value is not None:
             # transforme la valeur value en list
             list_value = ModifyEml.parse_email_list(value)
             list_new_recipients = [
@@ -330,8 +331,8 @@ class ModifyEml:
         :param field: nom du champs à modifier (string).
         :param value: nouvelle valeur de la balise (string).
         """
-        _bool, _ = self._value_exist(field)
-        if _bool is True and value is not None:
+        exists, _ = self._value_exists(field)
+        if exists is True and value is not None:
             setattr(self.eml_object, field, value)
 
     def _set_recipient(self, recipient, field_name):
@@ -437,17 +438,18 @@ class ModifyEml:
         ]:
             self.update_header_field(item)
 
-    def save(self, new_file_path):
+    def save(self, file_path, increment=1000):
         """
         Enregistrer un objet email au format eml.
         :param new_file_path: chemin de destination de l'eml.
         """
         self._modify_header()
         if not hasattr(self.eml_object, "as_bytes"):
-            raise AttributeError(
-                "L'objet EML ne possède pas de méthode 'as_bytes'.")
+            raise AttributeError("L'objet eml ne possède pas de méthode 'as_bytes'.")
+        new_file_path, new_file_name = increment_file_name(file_path, increment)
         with open(new_file_path, "wb") as f:
             f.write(self.eml_object.as_bytes())
+        return new_file_path, new_file_name
 
 
 def modify(
@@ -465,6 +467,7 @@ def modify(
     """
     Fonction simple pour modifier les emls.
     Ne prend en charge que les fonctions set, mais pas add ou remove.
+    Retourne un tuple constitué de date, message_id, original_file_name, new_file_path, new_file_name.
     :param file_path: chemin vers l'eml (string).
     :param destination_folder: chemin vers le dossier de destination de l'eml pour la sauvegarde (string).
     :param subject: valeur du sujet du mail à modifier,None par défaut (string).
@@ -479,10 +482,10 @@ def modify(
     # Charger l'email d'entrée
     eml = Eml(file_path)
     # Eml.print_eml_data(eml, eml_data=False)
-    name = eml.get_name()
+    original_file_name = eml.get_name()
     # # Construire le chemin de destination et sauvegarder
-    destination_file_path = os.path.join(destination_folder, name)
-
+    destination_file_path = path.join(destination_folder, original_file_name)
+    destination_file_path = Path(destination_file_path)
     # Créer l'objet à modifier
     eml_modifier = ModifyEml(eml)
     # modifier les valeurs
@@ -498,42 +501,80 @@ def modify(
     if message_id == True:
         eml_modifier.set_message_id()
 
-    eml_modifier.save(destination_file_path)
+    new_file_path, new_file_name = eml_modifier.save(destination_file_path)
 
     # obtenir les informations nécessaires pour les tests
     date = eml.get_date()
     message_id = eml.get_message_id()
-    return date, message_id
+    return date, message_id, original_file_name, new_file_path, new_file_name
 
 
-def execute_eml_modification(process, file_name, entry_folder_path, destination_folder_path):
+def execute_eml_modification(
+    process, file_name, entry_folder_path, destination_folder_path
+):
     """
     Traite la modification des fichiers eml en fonction du nom de fichier fourni.
-    Retourne une liste de dictionaire contenant les dates et les message-id des emls.
+    Retourne une liste de dictionaire contenant constitué d'un dictionnaire avec date, message_id, original_file_name, new_file_path, new_file_name.
     :param process: Fonction à appliquer au fichier eml (string).
     :param file_name: Nom de fichier ou liste de noms de fichiers eml à traiter (string ou list).
     :param entry_folder_path: Chemin du dossier d'entrée (string).
     :param destination_folder_path: Chemin du dossier de destination (string).
     """
     list_value = []
-    if isinstance(file_name, list):
+
+    if isinstance(file_name, list) or isinstance(file_name, tuple):
         for name in file_name:
-            date, message_id = _modify_eml(process=process, file_name=name, entry_folder_path=entry_folder_path, destination_folder_path=destination_folder_path,
-                                           )
-            dictionary = {"date": date, "message_id": message_id}
+            try:
+                date, message_id, original_file_name, new_file_path, new_file_name = (
+                    _modify_eml(
+                        process=process,
+                        file_name=name,
+                        entry_folder_path=entry_folder_path,
+                        destination_folder_path=destination_folder_path,
+                    )
+                )
+                dictionary = {
+                    "date": date,
+                    "message_id": message_id,
+                    "original_file_name": original_file_name,
+                    "new_file_path": new_file_path,
+                    "new_file_name": new_file_name,
+                }
+                list_value.append(dictionary)
+            except Exception as e:
+                msg = f"Erreur lors du traitement de l'eml {name}: {e}"
+                print(msg)
+    elif isinstance(file_name, str):
+        try:
+            date, message_id, original_file_name, new_file_path, new_file_name = (
+                _modify_eml(
+                    process=process,
+                    file_name=file_name,
+                    entry_folder_path=entry_folder_path,
+                    destination_folder_path=destination_folder_path,
+                )
+            )
+            dictionary = {
+                "date": date,
+                "message_id": message_id,
+                "original_file_name": original_file_name,
+                "new_file_path": new_file_path,
+                "new_file_name": new_file_name,
+            }
             list_value.append(dictionary)
+        except Exception as e:
+            msg = f"Erreur lors du traitement de l'eml {file_name}: {e}"
+            print(msg)
     else:
-        date, message_id = _modify_eml(process=process, file_name=file_name, entry_folder_path=entry_folder_path,
-                                       destination_folder_path=destination_folder_path)
-        dictionary = {"date": date, "message_id": message_id}
-        list_value.append(dictionary)
+        msg = f"Erreur lors du traitement de l'eml {file_name}: {e}"
+        raise ValueError(msg)
     return list_value
 
 
 def _modify_eml(process, file_name, entry_folder_path, destination_folder_path):
     """
     Modifie un fichier eml en utilisant la fonction de traitement fournie.
-    Retourne la date et le message-id de l'eml.
+    Retourne un tuple constitué de date, message_id, original_file_name, new_file_path, new_file_name.
     :param process: Fonction à appliquer au fichier eml.
     :param file_name: Nom du fichier eml à traiter (string).
     :param entry_folder_path: Chemin du dossier d'entrée (string).
@@ -548,26 +589,28 @@ def _modify_eml(process, file_name, entry_folder_path, destination_folder_path):
         msg = f"Erreur sur file_name : {file_name}"
         raise ValueError(msg)
 
-    try:
-        date, message_id = _wrapper_process(process=process, file_path=file_path,
-                                            destination_folder_path=destination_folder_path)
-        return date, message_id
-    except Exception as e:
-        msg = f"Erreur lors du traitement de l'eml {file_path}: {e}"
-        print(msg)
+    date, message_id, original_file_name, new_file_path, new_file_name = (
+        _wrapper_process(
+            process=process,
+            file_path=file_path,
+            destination_folder_path=destination_folder_path,
+        )
+    )
+    return date, message_id, original_file_name, new_file_path, new_file_name
 
 
 def _wrapper_process(process, file_path, destination_folder_path):
     """
     Wrapper pour appeler les fonctions de traitement.
-    Retourne la date et le message-id de l'eml.
+    Retourne un tuple constitué de date, message_id, original_file_name, new_file_path, new_file_name.
     :param process: Fonction à appliquer au fichier eml (string).
     :param file_path: Chemin du fichier eml à traiter (string).
     :param destination_folder_path: Chemin du dossier de destination (string).
     """
-    date, message_id = process(eml_file_path=file_path,
-                               destination_folder_path=destination_folder_path)
-    return date, message_id
+    date, message_id, original_file_name, new_file_path, new_file_name = process(
+        eml_file_path=file_path, destination_folder_path=destination_folder_path
+    )
+    return date, message_id, original_file_name, new_file_path, new_file_name
 
 
 class TextEncoding:

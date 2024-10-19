@@ -4,7 +4,7 @@ import os
 
 
 def directory_exist(path):
-    if not os.path.isdir(path):
+    if path is None or not os.path.isdir(path):
         msg = f"Le dossier n'est pas trouvé : {path}"
         raise FileNotFoundError(msg)
 

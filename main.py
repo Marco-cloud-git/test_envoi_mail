@@ -1,31 +1,41 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import os
+from os import path
+from pathlib import Path
 from time import perf_counter
-import depotEml.config as config
-from gestionEml.eml import Eml, ModifyEml, execute_eml_modification, modify, define_file_path
+
+# import depotEml.config as config
+from depotEml import config as config
+from gestionEml.eml import (
+    Eml,
+    ModifyEml,
+    execute_eml_modification,
+    modify,
+    define_file_path,
+)
 import imap.connexionIMAP as connexionIMAP
 
 ############### Parametrages IMAP ###############
-#"outlook.office365.com"
-imap_serveur = (
-    "imap-mail.outlook.com"
-)
+# "outlook.office365.com"
+imap_serveur = "imap-mail.outlook.com"
 port_imap = 993
 email_adress = "jeandelaged@outlook.fr"
 password = ""
 
 
 ############### Gestion Eml ###############
-eml_name_1 = "2331459201382 nom PJ trop long.eml"
-eml_name_2 = "eml avec 2 docs PDF dont 1 multipages.eml"
-eml_name_3 = "eml avec 3 PJ portant le meme nom.eml"
-eml_name_4 = "piece jointe docx.eml"
-eml_name_5 = "PJ PDF qui contient une couche texte.eml"
-eml_name_6 = "PJ zip contenant 2 docs du meme nom.eml"
-eml_name_7 = "test YAHOO PJ nom avec caractères spéciaux.eml"
-list_eml = [eml_name_1, eml_name_2, eml_name_3,
-            eml_name_4, eml_name_5, eml_name_6, eml_name_7]
+eml_name_1 = "test YAHOO PJ nom avec caractères spéciaux.eml"
+eml_name_2 = "test YAHOO PJ nom avec caractères spéciaux.eml"
+eml_name_3 = "toto.eml"
+eml_name_4 = None
+eml_name_5 = "2331459201382 nom PJ trop long.eml"
+eml_name_6 = "eml avec 2 docs PDF dont 1 multipages.eml"
+eml_name_7 = "eml avec 3 PJ portant le meme nom.eml"
+eml_name_8 = "piece jointe docx.eml"
+eml_name_9 = "PJ PDF qui contient une couche texte.eml"
+eml_name_10 = "PJ zip contenant 2 docs du meme nom.eml"
+
+list_eml = [eml_name_1, eml_name_2, eml_name_3, eml_name_4]
 
 new_subject = "New subject"  # None
 new_sender = "new_sender@test.fr"
@@ -47,13 +57,13 @@ def main(process, file_name):
         config.dict_directory
     )
     execute_eml_modification(
-        process, file_name, entry_folder_path, destination_folder_path)
+        process, file_name, entry_folder_path, destination_folder_path
+    )
 
 
 def connect_imap(file_name):
     # se connecter
-    imap = connexionIMAP.connexion(
-        imap_serveur, port_imap, email_adress, password)
+    imap = connexionIMAP.connexion(imap_serveur, port_imap, email_adress, password)
 
     # avoir la liste des dossier de la boite mail
     mailBoxlist = connexionIMAP.listerDossier(imap)
@@ -83,14 +93,15 @@ def connect_imap(file_name):
 def exemple_1(eml_file_path, destination_folder_path):
     # exemple 1 : avec toutes les fonctions disponibles
     # Charger l'email d'entrée
+    # eml_file_path = Path(eml_file_path)
     eml = Eml(eml_file_path)
     # autres fonctionnalités : afficher touts les paramétres et exemple d'un get pour obtenir le nom
     # Eml.print_eml_data(eml, eml_data=False)
-    file_name = eml.get_name()
+    original_file_name = eml.get_name()
 
     # # Construire le chemin de destination
-    destination_file_path = os.path.join(destination_folder_path, file_name)
-
+    destination_file_path = path.join(destination_folder_path, original_file_name)
+    destination_file_path = Path(destination_file_path)
     # Créer l'objet à modifier
     eml_modifier = ModifyEml(eml)
     # modifier les valeurs
@@ -112,17 +123,17 @@ def exemple_1(eml_file_path, destination_folder_path):
     eml_modifier.add_bcc(recipient=new_bcc)
 
     # sauvegarder
-    eml_modifier.save(destination_file_path)
+    new_file_path, new_file_name = eml_modifier.save(destination_file_path)
 
     date = eml.get_date()
     message_id = eml.get_message_id()
 
-    return date, message_id
+    return date, message_id, original_file_name, new_file_path, new_file_name
 
 
 def exemple_2(eml_file_path, destination_folder_path):
     # exemple 2 : avec seulement la fonction set
-    date, message_id = modify(
+    date, message_id, original_file_name, new_file_path, new_file_name = modify(
         file_path=eml_file_path,
         destination_folder=destination_folder_path,
         subject=new_subject,
@@ -133,7 +144,7 @@ def exemple_2(eml_file_path, destination_folder_path):
         cc=new_cc,
         bcc=new_cc,
     )
-    return date, message_id
+    return date, message_id, original_file_name, new_file_path, new_file_name
 
 
 ################## Pour lancer le script ##################
@@ -142,23 +153,24 @@ if __name__ == "__main__":
     # main(process=exemple_1, file_name=list_eml)
 
     ############### ce que l'on aurait en roboframework ###############
-    file_name = "2331459201382 nom PJ trop long.eml"
+    file_name = eml_name_1
     list_file_name = list_eml
 
     entry_folder_path, destination_folder_path = config.config_controle_directory(
-        config.dict_directory)
+        config.dict_directory
+    )
 
     ########## proposition 1 : avec wrapper ##########
 
     ##### cas exemple_1 pour 1 eml #####
-    list_eml_data = execute_eml_modification(process=exemple_1, file_name=file_name,
-                                          entry_folder_path=entry_folder_path, destination_folder_path=destination_folder_path)
-    print(list_eml_data)
-
-    ##### cas exemple_1 pour une liste d'eml #####
-    # list_eml_data = execute_eml_modification(process=exemple_1, file_name=list_file_name,
+    # list_eml_data = execute_eml_modification(process=exemple_1, file_name=file_name,
     #                                       entry_folder_path=entry_folder_path, destination_folder_path=destination_folder_path)
     # print(list_eml_data)
+
+    #### cas exemple_1 pour une liste d'eml #####
+    list_eml_data = execute_eml_modification(process=exemple_1, file_name=list_file_name,
+                                          entry_folder_path=entry_folder_path, destination_folder_path=destination_folder_path)
+    print(list_eml_data)
 
     ##### cas exemple_2 pour 1 eml #####
     # list_eml_data = execute_eml_modification(process=exemple_2, file_name=file_name,
@@ -171,12 +183,10 @@ if __name__ == "__main__":
     # print(list_eml_data)
 
     ########## proposition 2 : sans wrapper -> ne gére pas les listes ##########
-    # file_path = define_file_path(
-    #         directory_path=entry_folder_path, file_name=file_name
-    #     )
+    # file_path = define_file_path(directory_path=entry_folder_path, file_name=file_name)
 
-    ##### cas exemple_3 #####
-    # date, message_id = modify(
+    # ##### cas exemple_3 #####
+    # date, message_id, original_file_name, new_file_path, new_file_name = modify(
     #     file_path=file_path,
     #     destination_folder=destination_folder_path,
     #     subject=new_subject,
@@ -187,10 +197,14 @@ if __name__ == "__main__":
     #     cc=new_cc,
     #     bcc=new_cc,
     # )
-    # print(f"date : {date}, message_id : {message_id}")
-    ##### cas exemple_4 #####
+    # print(
+    #     f"date : {date}, message_id : {message_id}, original_file_name : {original_file_name}, new_file_path : {new_file_path}, new_file_name : {new_file_name}"
+    # )
+
+    # ##### cas exemple_4 #####
     # eml = Eml(file_path)
-    # destination_file_path = os.path.join(destination_folder_path, file_name)
+    # destination_file_path = path.join(destination_folder_path, file_name)
+    # destination_file_path = Path(destination_file_path)
     # eml_modifier = ModifyEml(eml)
     # eml_modifier.set_message_id()
     # eml_modifier.set_subject(new_subject)
@@ -208,7 +222,8 @@ if __name__ == "__main__":
     # eml_modifier.remove_cc(cc_to_remove)
     # eml_modifier.remove_cc(another_cc_to_remove)
     # eml_modifier.add_bcc(recipient=new_bcc)
-    # eml_modifier.save(destination_file_path)
+    # new_file_path, new_file_name = eml_modifier.save(destination_file_path)
+    # original_file_name = eml.get_name()
     # date = eml.get_date()
     # message_id = eml.get_message_id()
-    # print(f"date : {date}, message_id : {message_id}")
+    # print(f"date : {date}, message_id : {message_id}, original_file_name : {original_file_name}, new_file_path : {new_file_path}, new_file_name : {new_file_name}")
