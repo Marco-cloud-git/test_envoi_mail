@@ -1,0 +1,234 @@
+import email
+import imaplib
+import email.header
+import sys
+import time
+
+
+def connexion(serveur_imap: str, port_imap: int, email_adress: str, password: str):
+    start = time.time()
+    resultat_connexion = "KO"
+    try:
+        obj_imap = imaplib.IMAP4_SSL(host=serveur_imap, port=port_imap)
+        # mail.debug = 4
+        resultat_connexion, resultat_login = obj_imap.login(
+            email_adress, password)
+        if "OK" in resultat_connexion:
+            print(f"Connexion à {email_adress} établie.")
+        if "completed" in resultat_login[0].decode():
+            print("Authentification réussie.")
+
+        mssg_connection_object = "Connection Object : {}".format(obj_imap)
+        mssg_total_time_taken = "Total Time Taken  : {:,.2f} Seconds\n".format(
+            time.time() - start
+        )
+        print(f"{mssg_connection_object}\n{mssg_total_time_taken}")
+        return obj_imap
+
+    except Exception as e:
+        print(
+            f"Erreur de type : {type(e).__name__}, Erreur : {e}.", level="error")
+
+    finally:
+        if (
+            "OK" not in resultat_connexion
+            or "completed" not in resultat_login[0].decode()
+        ):
+            print(f"Arret du script.")
+            sys.exit()
+
+
+# obtenir une liste de dossiers
+def listerDossier(obj_imap: imaplib.IMAP4_SSL) -> None:
+    try:
+        mailBoxlist = []
+        result, folders = obj_imap.list()
+        for folder in folders:
+            mailBoxlist.append(folder.decode("utf-8").split('"/" ')[1])
+        return mailBoxlist
+    except Exception as e:
+        print(
+            f"Erreur lors de la récupration des dossiers : {e}.", level="error")
+        sys.exit()
+
+
+# compter le nombre de mail par dossier
+def count_mail_from_mailbox(obj_imap: imaplib.IMAP4_SSL, list: list[str]) -> None:
+    try:
+        for mailBox in list:
+            response, value = obj_imap.select(mailBox)
+            print(
+                f"Sélection {mailBox} \t status {response}  \t nombre d'eml {value[0].decode()}."
+            )
+    except Exception as e:
+        print(
+            f"{mailBox} - ErrorType : {type(e).__name__}, Error : {e}.", level="error")
+
+
+# Déconnexion de toutes les boites mails ouvertes
+def deconnexion(obj_imap: imaplib.IMAP4_SSL) -> None:
+    try:
+        if obj_imap is None:
+            raise log(
+                f"Erreur lors de la déconnexion car la connexion n'a pas été établie.",
+                level="error",
+            )
+        else:
+            obj_imap.logout()
+            log("Déconnexion réussie.")
+    except imaplib.IMAP4_SSL.error as e:
+        log(f"Erreur lors de la déconnexion : {e}.", level="error")
+
+
+# Retourner la liste des uid des mails dans un dossier
+def listerUidMail(obj_imap: imaplib.IMAP4_SSL, mailBox: str) -> list[str]:
+    obj_imap.select(mailBox)
+    # None : charset -> ne pas tenir compte de l'encodage
+    # "All": criteria -> indique que tous les email du dossier doivent etre recupere
+    result, data = obj_imap.uid("search", None, "All")  # data est un tuple
+    listUid = data[0].split()  # [0] car une liste n'a pas d'attribut split
+    # print("Liste des UID :\n", data)
+    return listUid
+
+
+def select_mailbox(obj_imap: imaplib.IMAP4_SSL, mailBox: str) -> str:
+    try:
+        resp_code, m_c = obj_imap.select(mailBox, readonly=True)
+        mssg = "Réussite de la sélection du dossier {}, {}, {}.".format(
+            mailBox, resp_code, m_c
+        )
+    except Exception as e:
+        mssg = "Echec de la sélection du dossier : {} , {}, Error : {}.".format(
+            mailBox, type(e).__name__, e
+        )
+        resp_code, m_c = None, None
+    return mssg
+
+
+# Retourner la liste des nuémros de mail
+
+
+def listerMail(obj_imap: imaplib.IMAP4_SSL, mailBox: str) -> list[str]:
+    # obj_imap.select(mailBox)
+    select_mailbox(obj_imap, mailBox)
+    result, l = obj_imap.search(None, "All")
+    listNumber = l[0].split()
+    # print("Liste des numéros de mail :\n", listNumber)
+    return listNumber
+
+
+def lireMail(
+    obj_imap: imaplib.IMAP4_SSL, mailBox: str, position: int, contenu="non"
+) -> None:
+    try:
+        obj_imap.select(mailBox)
+        l = listerMail(obj_imap, mailBox)
+        n = position - 1
+        result, email_data = obj_imap.fetch(l[n], "(RFC822)")
+        raw_email = email_data[0][1]
+        email_message = email.message_from_bytes(raw_email)
+
+        # raw_email = email_data[0][1].decode("utf-8")
+        # email_message = email.message_from_string(raw_email)
+
+        from_ = email_message["From"]
+        to_ = email_message["To"]
+        cc_ = email_message["Cc"]
+        bcc_ = email_message["Bcc"]
+        suject_ = email_message["Subject"]
+        date_ = email_message["Date"]
+        messageId_ = email_message["Message-ID"]
+        print(f"Message Number : {position}")
+        print(f"From : {from_}")
+        print(f"To : {to_}")
+        print(f"Cc : {cc_}")
+        print(f"Bcc : {bcc_}")
+        print(f"Subject : {suject_}")
+        print(f"Date : {date_}")
+        print(f"Message-ID : {messageId_}")
+        # extraire le contenu du mail
+        # pour que cela ne soit pas sensible à la casse, on met en minuscule
+        contenu = contenu.lower()
+        if contenu == None or contenu == "non":
+            pass
+        elif contenu == "oui":
+            afficherContenu(email_message)
+        else:
+            print("contenu ne peut prendre que les valeurs 'oui' ou 'non'.")
+            raise ValueError(
+                "La valeur de l'argument doit être 'oui' ou 'non'.")
+
+    except Exception as e:
+        print(
+            f"Erreur lors de la lecture du mail à la position {position}\nErreur : {e}."
+        )
+
+
+def afficherContenu(email_message) -> None:
+    print(type(email_message))
+    print("\nContenu:")
+    if email_message.is_multipart():
+        text = ""
+        for part in email_message.walk():
+            if part.get_content_type() == "text/plain":
+                payload = part.get_payload(decode=True)
+                if payload is not None:
+                    charset = part.get_content_charset()
+                    if charset:
+                        text += payload.decode(charset).replace("\r", "")
+            elif part.get_content_type() != "multipart/alternative":
+                # ignorer toutes les parties qui ne sont pas text/plain ou multipart/alternative
+                continue
+    else:
+        text = email_message.get_payload(decode=True)
+        charset = email_message.get_content_charset()
+        if charset:
+            text = text.decode(charset).replace("\r", "")
+    print(text)
+
+
+def importEml(path_eml: str, server: str, mailbox: str) -> None:
+    try:
+        data = eml_binary(path_eml)
+        date = imaplib.Time2Internaldate(time.time())
+        rc, response = server.append(mailbox, "", date, data)
+        mssg = (
+            "Chemin de l'eml à copier : {}\nObjet : {}\nMailbox : {}\nDate : {}\nStatus : {}\nReponse : {}.\n".format(
+                path_eml, server, mailbox, date, rc, response
+            )
+        )
+        print(mssg)
+
+    except Exception as e:
+        print(
+            f"Echec de l'importation de l'eml : {path_eml}\nErreur : {e}\n",
+            level="error",
+        )
+
+
+def eml_binary(pathFile: str) -> str:
+    try:
+        with open(pathFile, "rb") as f:
+            data = f.read()
+    except Exception as e:
+        print(
+            f"Echec de l'ouverture du fichier : {pathFile},\nErreur : , {e}",
+            level="error",
+        )
+    return data
+
+
+# obtenir le current working directory
+# import os
+# print(os.getcwd())
+
+# IMAP4.close() : cette méthode ferme la boîte aux lettres courante sur le serveur.
+# Cela libère les ressources utilisées pour cette boîte aux lettres, mais ne ferme pas la connexion.
+# La boîte aux lettres peut être réouverte avec la méthode IMAP4.select().
+
+# IMAP4.shutdown() : cette méthode ferme la connexion avec le serveur de messagerie et libère toutes les ressources associées à la connexion.
+# Cette méthode est appelée automatiquement lorsque l'objet IMAP4 est supprimé, mais il est recommandé de l'appeler explicitement pour garantir la libération correcte des ressources.
+
+# IMAP4.logout() : cette méthode se déconnecte du serveur de messagerie et ferme la connexion.
+# Cela libère toutes les ressources associées à la connexion, y compris toutes les boîtes aux lettres ouvertes.
+# La prochaine fois que vous voulez accéder à la messagerie, vous devez établir une nouvelle connexion et vous connecter à nouveau avec les identifiants nécessaires.
