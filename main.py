@@ -4,18 +4,16 @@ import os
 from time import perf_counter
 import depotEml.config as config
 from gestionEml.eml import Eml, ModifyEml, execute_eml_modification, modify, define_file_path
-import Imap.connexionIMAP as connexionIMAP
+import imap.connexionIMAP as connexionIMAP
 
 ############### Parametrages IMAP ###############
-# "pptechimap.maif.pprod" #"outlook.office365.com"
+#"outlook.office365.com"
 imap_serveur = (
-    "pptechimap.maif.pprod"  # "pptechimap.maif.pprod"  # "imap-mail.outlook.com"
+    "imap-mail.outlook.com"
 )
 port_imap = 993
-# "gestionsinistre.recn.o365@pprodmaif.fr"
-# "gestionsinistre.preprod.o365@pprodmaif.fr"       #"resiliationinternet.recx.o365@pprodmaif.fr"   #"gestionsocietaire.recn.o365@pprodmaif.fr"  # "rejet_mail.recn.o365@pprodmaif.fr"  # "jeandelaged@outlook.fr"
-email_adress = "reclamation.ppcor.o365@pprodmaif.fr"
-password = "GeDM@aif0365"  # "GedJean@extXXX"  # "GeDM@aif0365"
+email_adress = "jeandelaged@outlook.fr"
+password = ""
 
 
 ############### Gestion Eml ###############
