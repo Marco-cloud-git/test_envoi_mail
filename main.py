@@ -93,7 +93,6 @@ def connect_imap(file_name):
 def exemple_1(eml_file_path, destination_folder_path):
     # exemple 1 : avec toutes les fonctions disponibles
     # Charger l'email d'entrée
-    # eml_file_path = Path(eml_file_path)
     eml = Eml(eml_file_path)
     # autres fonctionnalités : afficher touts les paramétres et exemple d'un get pour obtenir le nom
     # Eml.print_eml_data(eml, eml_data=False)
@@ -103,48 +102,51 @@ def exemple_1(eml_file_path, destination_folder_path):
     destination_file_path = path.join(destination_folder_path, original_file_name)
     destination_file_path = Path(destination_file_path)
     # Créer l'objet à modifier
-    eml_modifier = ModifyEml(eml)
+    eml_modifie = ModifyEml(eml)
     # modifier les valeurs
-    eml_modifier.set_message_id()
-    eml_modifier.set_subject(new_subject)
-    eml_modifier.set_from(new_sender)
-    eml_modifier.set_return_path(new_return_path)
-    eml_modifier.set_reply_to(new_reply_to)
-    eml_modifier.set_cc(new_cc)
-    eml_modifier.set_cc(another_cc)
-    eml_modifier.set_bcc(new_bcc)
-    eml_modifier.add_to(new_to)
-    eml_modifier.add_cc(new_cc)
-    eml_modifier.add_cc(cc_to_remove)
-    eml_modifier.add_cc(another_cc)
-    eml_modifier.add_cc(and_another_cc)
-    eml_modifier.remove_cc(cc_to_remove)
-    eml_modifier.remove_cc(another_cc_to_remove)
-    eml_modifier.add_bcc(recipient=new_bcc)
+    eml_modifie.set_message_id()
+    eml_modifie.set_subject(new_subject)
+    eml_modifie.set_from(new_sender)
+    eml_modifie.set_return_path(new_return_path)
+    eml_modifie.set_reply_to(new_reply_to)
+    eml_modifie.set_cc(new_cc)
+    eml_modifie.set_cc(another_cc)
+    eml_modifie.set_bcc(new_bcc)
+    eml_modifie.add_to(new_to)
+    eml_modifie.add_cc(new_cc)
+    eml_modifie.add_cc(cc_to_remove)
+    eml_modifie.add_cc(another_cc)
+    eml_modifie.add_cc(and_another_cc)
+    eml_modifie.remove_cc(cc_to_remove)
+    eml_modifie.remove_cc(another_cc_to_remove)
+    eml_modifie.add_bcc(recipient=new_bcc)
 
     # sauvegarder
-    new_file_path, new_file_name = eml_modifier.save(destination_file_path)
+    new_file_path, new_file_name = eml_modifie.save(destination_file_path)
 
-    date = eml.get_date()
-    message_id = eml.get_message_id()
+    date = eml_modifie.eml_object.date  # eml.get_date()
+    message_id = eml_modifie.eml_object.message_id  # eml.get_message_id()
+    document = eml_modifie.eml_object.document
 
-    return date, message_id, original_file_name, new_file_path, new_file_name
+    return date, message_id, document, original_file_name, new_file_path, new_file_name
 
 
 def exemple_2(eml_file_path, destination_folder_path):
     # exemple 2 : avec seulement la fonction set
-    date, message_id, original_file_name, new_file_path, new_file_name = modify(
-        file_path=eml_file_path,
-        destination_folder=destination_folder_path,
-        subject=new_subject,
-        sender=new_sender,
-        return_path=new_return_path,
-        reply_to=new_reply_to,
-        to=new_to,
-        cc=new_cc,
-        bcc=new_cc,
+    date, message_id, document, original_file_name, new_file_path, new_file_name = (
+        modify(
+            file_path=eml_file_path,
+            destination_folder=destination_folder_path,
+            subject=new_subject,
+            sender=new_sender,
+            return_path=new_return_path,
+            reply_to=new_reply_to,
+            to=new_to,
+            cc=new_cc,
+            bcc=new_cc,
+        )
     )
-    return date, message_id, original_file_name, new_file_path, new_file_name
+    return date, message_id, document, original_file_name, new_file_path, new_file_name
 
 
 ################## Pour lancer le script ##################
@@ -159,8 +161,8 @@ if __name__ == "__main__":
     entry_folder_path, destination_folder_path = config.config_controle_directory(
         config.dict_directory
     )
-
-    ########## proposition 1 : avec wrapper ##########
+    ##################################################################################################################################
+    ########## PROPOSITION 1 : avec wrapper ##########
 
     ##### cas exemple_1 pour 1 eml #####
     # list_eml_data = execute_eml_modification(process=exemple_1, file_name=file_name,
@@ -168,9 +170,9 @@ if __name__ == "__main__":
     # print(list_eml_data)
 
     #### cas exemple_1 pour une liste d'eml #####
-    list_eml_data = execute_eml_modification(process=exemple_1, file_name=list_file_name,
-                                          entry_folder_path=entry_folder_path, destination_folder_path=destination_folder_path)
-    print(list_eml_data)
+    # list_eml_data = execute_eml_modification(process=exemple_1, file_name=list_file_name,
+    #                                       entry_folder_path=entry_folder_path, destination_folder_path=destination_folder_path)
+    # print(list_eml_data)
 
     ##### cas exemple_2 pour 1 eml #####
     # list_eml_data = execute_eml_modification(process=exemple_2, file_name=file_name,
@@ -178,52 +180,68 @@ if __name__ == "__main__":
     # print(list_eml_data)
 
     ##### cas exemple_2 pour une liste d'eml #####
-    # list_eml_data = execute_eml_modification(process=exemple_2, file_name=list_file_name,
-    #                                       entry_folder_path=entry_folder_path, destination_folder_path=destination_folder_path)
-    # print(list_eml_data)
+    list_eml_data = execute_eml_modification(process=exemple_2, file_name=list_file_name,
+                                          entry_folder_path=entry_folder_path, destination_folder_path=destination_folder_path)
+    print(list_eml_data)
 
-    ########## proposition 2 : sans wrapper -> ne gére pas les listes ##########
-    # file_path = define_file_path(directory_path=entry_folder_path, file_name=file_name)
+    ##################################################################################################################################
+    ########## PROPOSITION 2 : sans wrapper -> ne gére pas les listes ##########
+    # eml_file_path = define_file_path(
+    #     directory_path=entry_folder_path, file_name=file_name
+    # )
 
     # ##### cas exemple_3 #####
-    # date, message_id, original_file_name, new_file_path, new_file_name = modify(
-    #     file_path=file_path,
-    #     destination_folder=destination_folder_path,
-    #     subject=new_subject,
-    #     sender=new_sender,
-    #     return_path=new_return_path,
-    #     reply_to=new_reply_to,
-    #     to=new_to,
-    #     cc=new_cc,
-    #     bcc=new_cc,
+    # date, message_id, document, original_file_name, new_file_path, new_file_name = (
+    #     modify(
+    #         file_path=eml_file_path,
+    #         destination_folder=destination_folder_path,
+    #         subject=new_subject,
+    #         sender=new_sender,
+    #         return_path=new_return_path,
+    #         reply_to=new_reply_to,
+    #         to=new_to,
+    #         cc=new_cc,
+    #         bcc=new_cc,
+    #     )
     # )
     # print(
-    #     f"date : {date}, message_id : {message_id}, original_file_name : {original_file_name}, new_file_path : {new_file_path}, new_file_name : {new_file_name}"
+    #     f"date : {date}, message_id : {message_id}, document : {document}, original_file_name : {original_file_name}, new_file_path : {new_file_path}, new_file_name : {new_file_name}"
     # )
 
     # ##### cas exemple_4 #####
-    # eml = Eml(file_path)
-    # destination_file_path = path.join(destination_folder_path, file_name)
-    # destination_file_path = Path(destination_file_path)
-    # eml_modifier = ModifyEml(eml)
-    # eml_modifier.set_message_id()
-    # eml_modifier.set_subject(new_subject)
-    # eml_modifier.set_from(new_sender)
-    # eml_modifier.set_return_path(new_return_path)
-    # eml_modifier.set_reply_to(new_reply_to)
-    # eml_modifier.set_cc(new_cc)
-    # eml_modifier.set_cc(another_cc)
-    # eml_modifier.set_bcc(new_bcc)
-    # eml_modifier.add_to(new_to)
-    # eml_modifier.add_cc(new_cc)
-    # eml_modifier.add_cc(cc_to_remove)
-    # eml_modifier.add_cc(another_cc)
-    # eml_modifier.add_cc(and_another_cc)
-    # eml_modifier.remove_cc(cc_to_remove)
-    # eml_modifier.remove_cc(another_cc_to_remove)
-    # eml_modifier.add_bcc(recipient=new_bcc)
-    # new_file_path, new_file_name = eml_modifier.save(destination_file_path)
+    # # Charger l'email d'entrée
+    # eml = Eml(eml_file_path)
+    # # autres fonctionnalités : afficher touts les paramétres et exemple d'un get pour obtenir le nom
+    # # Eml.print_eml_data(eml, eml_data=False)
     # original_file_name = eml.get_name()
-    # date = eml.get_date()
-    # message_id = eml.get_message_id()
-    # print(f"date : {date}, message_id : {message_id}, original_file_name : {original_file_name}, new_file_path : {new_file_path}, new_file_name : {new_file_name}")
+
+    # # # Construire le chemin de destination
+    # destination_file_path = path.join(destination_folder_path, original_file_name)
+    # destination_file_path = Path(destination_file_path)
+    # # Créer l'objet à modifier
+    # eml_modifie = ModifyEml(eml)
+    # # modifier les valeurs
+    # eml_modifie.set_message_id()
+    # eml_modifie.set_subject(new_subject)
+    # eml_modifie.set_from(new_sender)
+    # eml_modifie.set_return_path(new_return_path)
+    # eml_modifie.set_reply_to(new_reply_to)
+    # eml_modifie.set_cc(new_cc)
+    # eml_modifie.set_cc(another_cc)
+    # eml_modifie.set_bcc(new_bcc)
+    # eml_modifie.add_to(new_to)
+    # eml_modifie.add_cc(new_cc)
+    # eml_modifie.add_cc(cc_to_remove)
+    # eml_modifie.add_cc(another_cc)
+    # eml_modifie.add_cc(and_another_cc)
+    # eml_modifie.remove_cc(cc_to_remove)
+    # eml_modifie.remove_cc(another_cc_to_remove)
+    # eml_modifie.add_bcc(recipient=new_bcc)
+
+    # # sauvegarder
+    # new_file_path, new_file_name = eml_modifie.save(destination_file_path)
+
+    # date = eml_modifie.eml_object.date
+    # message_id = eml_modifie.eml_object.message_id
+    # document = eml_modifie.eml_object.document
+    # print(f"date : {date}, message_id : {message_id}, document : {document}, original_file_name : {original_file_name}, new_file_path : {new_file_path}, new_file_name : {new_file_name}")
